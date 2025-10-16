@@ -255,7 +255,7 @@ def peers(request: HttpRequest):
                     "info": {
                         "device_name": client.device_name,
                         "os": client.os,
-                        "username": client.device_name,
+                        "username": client.username,
                     },
                 } for client in client_list['results'] if client.uuid != uuid
             ]
