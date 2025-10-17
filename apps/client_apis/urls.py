@@ -11,5 +11,5 @@ urlpatterns = [
     path('currentUser', views.current_user),
     path('users', views.users),
     path('peers', views.peers),
-    path('time_test', views.time_test),
+    path('time', views.time_test),
 ]
