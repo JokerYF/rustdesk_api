@@ -1,4 +1,5 @@
 import json
+import json
 import logging
 
 from django.contrib.auth.models import User
@@ -7,10 +8,29 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from apps.client_apis.common import check_login
+from apps.common.utils import get_local_time
 from apps.db.service import HeartBeatService, SystemInfoService, TokenService, UserService, LoginLogService, \
     LoginClientService
 
 logger = logging.getLogger(__name__)
+
+
+@require_http_methods(["GET"])
+def time_test(request: HttpRequest):
+    """
+    测试时间存储是否使用服务器本地时间
+
+    :param request: HTTP请求对象
+    :return: 包含当前时间和时区信息的JSON响应
+    """
+    now = timezone.now()
+    local_time = timezone.localtime(now)
+
+    return JsonResponse({
+        'utc_time': now.isoformat(),
+        'local_time': local_time.isoformat(),
+        'timezone': str(local_time.tzinfo)
+    })
 
 
 @require_http_methods(["POST"])
@@ -18,7 +38,7 @@ def heartbeat(request: HttpRequest):
     request_data = json.loads(request.body.decode('utf-8'))
     uuid = request_data.get('uuid')
     client_id = request_data.get('id')
-    modified_at = request_data.get('modified_at', timezone.now())
+    modified_at = request_data.get('modified_at', get_local_time())
     ver = request_data.get('ver')
 
     TokenService().update_token_by_uuid(uuid)

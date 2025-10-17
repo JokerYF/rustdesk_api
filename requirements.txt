@@ -1,2 +1,2 @@
 django~=5.2
-python-decouple==3.6
+uwsgi~=2.0.21

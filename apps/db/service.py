@@ -1,12 +1,12 @@
 import hashlib
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.db import models
-from django.utils import timezone
 
+from apps.common.utils import get_local_time
 from apps.db.models import HeartBeat, SystemInfo, LoginLog, Token, LoginClient, TagToClient, Tag
 
 logger = logging.getLogger(__name__)
@@ -177,26 +177,8 @@ class HeartBeatService(BaseService):
     db = HeartBeat
 
     def update(self, uuid, **kwargs):
-        # 处理时间戳转datetime
-        if 'modified_at' in kwargs:
-            try:
-                if isinstance(kwargs['modified_at'], (int, float)):
-                    naive_dt = datetime.fromtimestamp(kwargs['modified_at'])
-                    kwargs['modified_at'] = timezone.make_aware(naive_dt)
-                elif isinstance(kwargs['modified_at'], str):
-                    naive_dt = datetime.fromisoformat(kwargs['modified_at'])
-                    kwargs['modified_at'] = timezone.make_aware(naive_dt)
-            except Exception as e:
-                logger.error(f'Datetime conversion error: {e}')
-                raise ValueError("Invalid modified_at format") from e
-        else:
-            # 如果没有提供 modified_at，则使用当前时间
-            current_time = timezone.now()
-            kwargs['modified_at'] = current_time
-
-        # timestamp 字段始终使用当前时间
-        kwargs['timestamp'] = timezone.now()
-
+        kwargs['modified_at'] = get_local_time()
+        kwargs['timestamp'] = get_local_time()
         return super().update(filters={'uuid': uuid}, **kwargs)
 
     def is_alive(self, uuid):
@@ -298,27 +280,27 @@ class TokenService(BaseService):
             username=username,
             uuid=uuid,
             token=token,
-            created_at=timezone.now(),
-            last_used_at=timezone.now(),
+            created_at=get_local_time(),
+            last_used_at=get_local_time(),
         )
         return token
 
     def check_token(self, token, timeout=3600):
         if _token := self.query(token=token).first():
-            return _token.last_used_at > timezone.now() - timedelta(seconds=timeout)
+            return _token.last_used_at > get_local_time() - timedelta(seconds=timeout)
         self.delete(token=token)
         return False
 
     def update_token(self, token):
         if _token := self.query(token=token).first():
-            _token.last_used_at = timezone.now()
+            _token.last_used_at = get_local_time()
             _token.save()
             return Token
         return False
 
     def update_token_by_uuid(self, uuid):
         if _token := self.query(uuid=uuid).first():
-            _token.last_used_at = timezone.now()
+            _token.last_used_at = get_local_time()
             _token.save()
             return Token
         return False
