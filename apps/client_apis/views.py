@@ -181,9 +181,7 @@ def current_user(request: HttpRequest):
     :return:
     """
     token_service = TokenService()
-    if token := request.headers.get('Authorization')[7:]:
-        if not token_service.check_token(token):
-            return JsonResponse({'error': '未登录'}, status=401)
+    token = request.headers.get('Authorization')[7:]
 
     user_info = token_service.get_user_info_by_token(token)
 
@@ -209,37 +207,25 @@ def users(request: HttpRequest):
     status = int(request.GET.get('status', 1))
     user_info = TokenService().get_user_info_by_token(request.headers.get('Authorization')[7:])
     if user_info.is_superuser:
-        result = UserService().get_list(status=status, page=page, page_size=page_size)
-        user_list = [
-            {
-                "name": user.username,
-                "email": user.email,
-                "note": "",
-                "is_admin": user.is_superuser,
-                "status": user.is_active,
-                "info": {}
-            } for user in result['results']
-        ]
-        return JsonResponse(
-            {
-                'total': len(user_list),
-                'data': user_list
-            }
-        )
+        result = UserService().get_list(status=status, page=page, page_size=page_size)['results']
+    else:
+        result = [user_info]
+
+    user_list = [
+        {
+            "name": user.username,
+            "email": user.email,
+            "note": "",
+            "is_admin": user.is_superuser,
+            "status": user.is_active,
+            "info": {}
+        } for user in result
+    ]
 
     return JsonResponse(
         {
-            'total': 1,
-            'data': [
-                {
-                    "name": user_info.username,
-                    "email": user_info.email,
-                    "note": "",
-                    "is_admin": user_info.is_superuser,
-                    "status": user_info.is_active,
-                    "info": {}
-                }
-            ]
+            'total': len(user_list),
+            'data': user_list
         }
     )
 
