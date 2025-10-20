@@ -51,26 +51,25 @@ def request_debug_log(func):
 
     def wrapper(request: HttpRequest, *args, **kwargs):
         __uuid = str(uuid1().hex)
-        log_data = {
-            'request_uuid': __uuid,
+        request_log = {
             'method': request.method,
             'path': request.path,
             'headers': dict(request.headers),
         }
-        if request.body:
-            log_data['request_body'] = json.loads(request.body)
+        if post := request.body:
+            request_log['request_body'] = json.loads(post)
         elif post := request.POST:
-            log_data['request_post_body'] = post.dict()
+            request_log['request_post_body'] = post.dict()
 
-        logger.debug(json.dumps(log_data))
+        logger.debug(f'request[{__uuid}]: {json.dumps(request_log)}')
         response = func(request, *args, **kwargs)
-        logger.debug(json.dumps(
+        response_log = json.dumps(
             {
-                'request_uuid': __uuid,
                 'status_code': response.status_code,
                 'response_body': json.loads(response.content),
             }
-        ))
+        )
+        logger.debug(f'response[{__uuid}]: {response_log}')
         return response
 
     return wrapper
