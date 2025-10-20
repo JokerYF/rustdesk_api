@@ -2,6 +2,7 @@ import hashlib
 import logging
 import time
 from datetime import timedelta
+from typing import TypeVar
 
 from django.contrib.auth.models import User
 from django.db import models
@@ -12,6 +13,9 @@ from apps.common.utils import get_local_time
 from apps.db.models import HeartBeat, SystemInfo, LoginLog, Token, LoginClient, TagToClient, Tag, UserToTag
 
 logger = logging.getLogger(__name__)
+
+# 定义泛型类型变量，用于表示各种模型类型
+ModelType = TypeVar('ModelType', bound=models.Model)
 
 
 class BaseService:
@@ -52,7 +56,7 @@ class BaseService:
             'total_pages': (total + page_size - 1) // page_size
         }
 
-    def create(self, **kwargs):
+    def create(self, **kwargs) -> ModelType:
         """
         创建新记录
         
@@ -70,7 +74,7 @@ class BaseService:
         """
         return self.db.objects.filter(*args, **kwargs).delete()
 
-    def query(self, *args, **kwargs):
+    def query(self, *args, **kwargs) -> QuerySet:
         """
         通用条件查询
         
@@ -79,16 +83,6 @@ class BaseService:
         :return: 查询结果集合
         """
         return self.db.objects.filter(*args, **kwargs)
-
-    def query_all(self, *args, **kwargs):
-        """
-        获取全部匹配记录
-        
-        :param args: Q查询对象
-        :param kwargs: 查询条件
-        :return: 全部查询结果
-        """
-        return self.query(*args, **kwargs).all()
 
     def update(self, filters: dict, **kwargs):
         """
@@ -125,37 +119,37 @@ class BaseService:
 class UserService(BaseService):
     db = User
 
-    def get(self, email):
+    def get(self, email) -> User | None:
         try:
             return self.db.objects.get(email=email)
         except self.db.DoesNotExist:
             return None
 
-    def create_user(self, user_name, password, email='', is_superuser=False, is_staff=False):
+    def create_user(self, username, password, email='', is_superuser=False, is_staff=False) -> User:
         user = self.create(
-            username=user_name,
+            username=username,
             email=email,
             is_superuser=is_superuser,
-            is_staff=is_staff
+            is_staff=is_staff,
         )
         user.set_password(password)
         user.save()
         logger.info(f'创建用户: {user}')
         return user
 
-    def get_user_by_email(self, email):
+    def get_user_by_email(self, email) -> User:
         return self.query(email=email).first()
 
-    def get_user_by_name(self, user_name):
-        return self.query(username=user_name).first()
+    def get_user_by_name(self, username) -> User:
+        return self.query(username=username).first()
 
-    def set_password(self, password, email=None, user_name=None):
-        if user_name is not None:
-            user = self.get_user_by_name(user_name)
+    def set_password(self, password, email=None, username=None):
+        if username is not None:
+            user = self.get_user_by_name(username)
         elif email is not None:
             user = self.get_user_by_email(email)
         else:
-            raise ValueError("Either user_name or email must be provided.")
+            raise ValueError("Either username or email must be provided.")
         user.set_password(password)
         user.save()
         logger.info(f'设置用户密码: {user}')
@@ -203,7 +197,7 @@ class HeartBeatService(BaseService):
         kwargs['timestamp'] = get_local_time()
         res = super().update(filters={'uuid': uuid}, **kwargs)
         # logger.debug(f'update heartbeat: {res}')
-        return res
+        # return res
 
     def is_alive(self, uuid, timeout=60):
         client = self.query(uuid=uuid).first()
@@ -266,7 +260,7 @@ class LoginLogService(BaseService):
     """
     db = LoginLog
 
-    def create(self, **kwargs):
+    def create(self, **kwargs) -> LoginLog:
         """
         创建登录日志记录
 
@@ -410,7 +404,7 @@ class TagService:
     def get_all_tags(self):
         """
         获取当前用户关联的所有标签
-        
+
         :return: QuerySet of Tag objects associated with the current user
         """
         user_tags = self.db_user2tag.objects.filter(username=self.username).select_related('tag_id')
