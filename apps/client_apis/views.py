@@ -84,8 +84,6 @@ def login(request: HttpRequest):
     :param request: HTTP请求对象
     :return: JSON响应对象
     """
-    logger.debug(f'login headers: {request.headers}')
-    logger.debug(f'login body: {request.body}')
     body = json.loads(request.body.decode('utf-8'))
     username = body.get('username')
     password = body.get('password')
@@ -93,11 +91,9 @@ def login(request: HttpRequest):
 
     try:
         user = User.objects.get(username=username)
+        user.check_password(password)
     except User.DoesNotExist as e:
-        return JsonResponse({'error': '用户名或密码错误'})
-
-    # 使用check_password方法验证密码
-    if not user.check_password(password):
+        logger.error(traceback.format_exc())
         return JsonResponse({'error': '用户名或密码错误'})
 
     token = TokenService().create_token(username, uuid)
@@ -131,8 +127,6 @@ def login(request: HttpRequest):
 @request_debug_log
 @check_login
 def logout(request: HttpRequest):
-    logger.debug(f'logout headers: {request.headers}')
-    logger.debug(f'logout body: {request.body}')
     body = json.loads(request.body.decode('utf-8'))
     uuid = body.get('uuid')
     token_service = TokenService()
@@ -387,8 +381,6 @@ def audit_conn(request):
     :param request:
     :return:
     """
-    logger.debug(f'autid conn headers: {request.headers}')
-    logger.debug(f'autid conn body: {request.body}')
     return JsonResponse(
         {
             'code': 1,
@@ -409,7 +401,6 @@ def audit_file(request):
     :param request:
     :return:
     """
-    logger.debug(f'autid file: {request.body}')
     # {"id":"488591401","info":"{\\"files\\":[[\\"\\",52923]],\\"ip\\":\\"172.16.41.91\\",\\"name\\":\\"Admin\\",\\"num\\":1}","is_file":true,"path":"C:\\\\Users\\\\Joker\\\\Downloads\\\\api_swagger.json","peer_id":"1508540501","type":1,"uuid":"MjI5MzdiMDAtNjExNy00OTVmLWFjNWUtNGM2MTc2NTE1Zjdl"}
     # {"id":"488591401","info":"{\\"files\\":[[\\"\\",801524]],\\"ip\\":\\"172.16.41.91\\",\\"name\\":\\"Admin\\",\\"num\\":1}","is_file":true,"path":"C:\\\\Users\\\\Joker\\\\Downloads\\\\782K.ofd","peer_id":"1508540501","type":0,"uuid":"MjI5MzdiMDAtNjExNy00OTVmLWFjNWUtNGM2MTc2NTE1Zjdl"}
 

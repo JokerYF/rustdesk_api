@@ -1,9 +1,9 @@
 import json
 import logging
-from uuid import uuid1
 
 from django.http import HttpRequest, JsonResponse
 
+from apps.common.utils import get_uuid
 from apps.db.service import TokenService, LoginClientService, SystemInfoService
 
 logger = logging.getLogger('request_debug_log')
@@ -48,9 +48,9 @@ def request_debug_log(func):
     :param func: 被装饰的函数
     :return: 装饰后的函数
     """
+    __uuid = get_uuid()
 
     def wrapper(request: HttpRequest, *args, **kwargs):
-        __uuid = str(uuid1().hex)
         request_log = {
             'method': request.method,
             'path': request.path,

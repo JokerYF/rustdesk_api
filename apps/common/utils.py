@@ -1,3 +1,5 @@
+from uuid import uuid1
+
 from django.utils import timezone
 
 
@@ -10,3 +12,12 @@ def get_local_time():
     now = timezone.now()
     local_time = timezone.localtime(now)
     return local_time
+
+
+def get_uuid():
+    """
+    获取一个UUID
+
+    :return: UUID
+    """
+    return str(uuid1().hex)
