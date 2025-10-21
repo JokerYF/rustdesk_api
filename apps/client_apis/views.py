@@ -11,7 +11,7 @@ from apps.client_apis.common import check_login, request_debug_log
 from apps.common.utils import get_local_time
 from apps.db.models import SystemInfo
 from apps.db.service import HeartBeatService, SystemInfoService, TokenService, UserService, \
-    LoginClientService, TagService, LogService
+    LoginClientService, TagService, LogService, AuditConnService
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,8 @@ def login(request: HttpRequest):
 
     try:
         user = User.objects.get(username=username)
-        user.check_password(password)
+        if not user.check_password(password):
+            raise
     except User.DoesNotExist as e:
         logger.error(traceback.format_exc())
         return JsonResponse({'error': '用户名或密码错误'})
@@ -374,13 +375,51 @@ def device_group_accessible(request):
 
 @require_http_methods(["POST"])
 @request_debug_log
-@check_login
-def audit_conn(request):
+def audit_conn(request: HttpRequest):
     """
     连接日志
     :param request:
     :return:
     """
+    body = json.loads(request.body)
+    action = body.get('action')
+    conn_id = body.get('conn_id')
+    ip = body.get('ip', '')
+    controlled_uuid = body.get('uuid')
+    session_id = body.get('session_id')
+    peer = body.get('peer')
+
+    audit_service = AuditConnService()
+    if action:
+        audit_service.create_log(
+            action=action,
+            conn_id=conn_id,
+            initiating_ip=ip,
+            # controller_uuid=uuid,
+            controlled_uuid=controlled_uuid,
+            session_id=session_id
+        )
+        if action == 'close':
+            add_log = audit_service.get(conn_id, action='new')
+            audit_service.update(
+                filters={
+                    'action': action,
+                    'conn_id': conn_id
+                }, username=UserService().get_username(add_log.username)
+            )
+    else:
+        system_info = SystemInfoService()
+        audit_service.update_log(
+            conn_id=conn_id,
+            initiating_ip=ip,
+            controller_uuid=system_info.get_client_info_by_client_id(peer[0]),
+            controlled_uuid=controlled_uuid,
+            session_id=session_id,
+            _type=int(body.get('type')),
+            username=str(peer[1]).lower() if peer else None
+        )
+
+
     return JsonResponse(
         {
             'code': 1,
@@ -394,7 +433,6 @@ def audit_conn(request):
 
 @require_http_methods(["POST"])
 @request_debug_log
-@check_login
 def audit_file(request):
     """
     文件日志

@@ -153,18 +153,21 @@ class Log(models.Model):
         db_table = 'log'
 
 
-class AutidLog(models.Model):
+class AutidConnLog(models.Model):
     """
     审计日志模型
     """
     action = models.CharField(max_length=50, verbose_name='操作类型')
     conn_id = models.IntegerField(verbose_name='连接ID')
     initiating_ip = models.CharField(max_length=50, verbose_name='发起IP')
-    session_id = models.CharField(max_length=50, verbose_name='会话ID')
+    session_id = models.CharField(max_length=50, verbose_name='会话ID', null=True)
     controller_uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE,
-                                        verbose_name='控制端UUID', related_name='auditlog_controller')
+                                        verbose_name='控制端UUID', related_name='auditlog_controller', null=True)
     controlled_uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE,
                                         verbose_name='被控端UUID', related_name='auditlog_controlled')
+    type = models.IntegerField(verbose_name='类型')
+    username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, max_length=50,
+                                 verbose_name='用户名', null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
     class Meta:
@@ -174,7 +177,7 @@ class AutidLog(models.Model):
         db_table = 'audit_log'
 
 
-class AuditFile(models.Model):
+class AuditFileLog(models.Model):
     """
     审计文件模型
     """

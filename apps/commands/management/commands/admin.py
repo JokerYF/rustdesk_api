@@ -48,7 +48,7 @@ class Command(BaseCommand):
             pwd = uuid.uuid1().hex[-8:]
             if not user_service.get_user_by_name('admin'):
                 user_service.create_user(
-                    user_name='admin',
+                    username='admin',
                     password=pwd,
                     email='',
                     is_superuser=True,
@@ -66,7 +66,7 @@ class Command(BaseCommand):
             else:
                 print('管理员账号不存在')
                 user_service.create_user(
-                    user_name='admin',
+                    username='admin',
                     password=new_pwd,
                     email='',
                     is_superuser=True,
@@ -75,19 +75,19 @@ class Command(BaseCommand):
                 print(f'管理员账号初始化成功，管理员密码：{new_pwd}')
 
         elif options.get('user') and options.get('passwd'):
-            user_name = options.get('user')
+            username = options.get('user')
             password = options.get('passwd')
 
-            if user_service.get_user_by_name(user_name):
-                print(f'用户 {user_name} 已存在')
+            if user_service.get_user_by_name(username):
+                print(f'用户 {username} 已存在')
             else:
                 user_service.create_user(
-                    user_name=user_name,
+                    username=username,
                     password=password,
                     email='',
                     is_superuser=False,
                     is_staff=True
                 )
-                print(f'用户 {user_name} 创建成功')
+                print(f'用户 {username} 创建成功')
         else:
             print('参数错误')

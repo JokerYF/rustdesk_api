@@ -20,7 +20,7 @@ def check_login(func):
     def wrapper(request: HttpRequest, *args, **kwargs):
         headers = request.headers
         if 'Authorization' not in headers:
-            return JsonResponse({'error': '未登录'}, status=401)
+            return JsonResponse({'error': 'NOT LOGGED IN'}, status=401)
         token_service = TokenService()
         token, user_info = token_service.get_user_token(request)
         uuid = token_service.get_cur_uuid_by_token(token)
@@ -34,7 +34,7 @@ def check_login(func):
                 username=user_info.username,
                 client_id=client_info.client_id,
             )
-            return JsonResponse({'error': '登录已过期'}, status=401)
+            return JsonResponse({'error': 'LOGIN EXPIRED'}, status=401)
         token_service.update_token(token)
         return func(request, *args, **kwargs)
 

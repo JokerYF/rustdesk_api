@@ -8,7 +8,7 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 
 from apps.common.utils import get_local_time, get_randem_md5
-from apps.db.models import HeartBeat, SystemInfo, Token, LoginClient, TagToClient, Tag, UserToTag, Log
+from apps.db.models import HeartBeat, SystemInfo, Token, LoginClient, TagToClient, Tag, UserToTag, Log, AutidConnLog
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class BaseService:
         """
         return self.db.objects.filter(*args, **kwargs)
 
-    def update(self, filters: dict, **kwargs):
+    def create_or_update(self, filters: dict, **kwargs):
         """
         通用更新方法（根据模型设计可能需要重写）
         
@@ -100,6 +100,9 @@ class BaseService:
                 **kwargs
             }
             self.create(**data)
+
+    def update(self, filters: dict, **kwargs):
+        return self.db.objects.filter(**filters).update(**kwargs)
 
     @staticmethod
     def get_username(username):
@@ -165,6 +168,9 @@ class SystemInfoService(BaseService):
     def get_client_info_by_uuid(self, uuid) -> SystemInfo:
         return self.query(uuid=uuid).first()
 
+    def get_client_info_by_client_id(self, client_id) -> SystemInfo:
+        return self.query(client_id=client_id).first()
+
     def update(self, uuid: str, **kwargs):
         """
         创建或更新系统信息
@@ -173,12 +179,9 @@ class SystemInfoService(BaseService):
         :param kwargs: 系统信息字段
         :return: (created, object)元组
         """
-        super().update(
-            filters={
-                'uuid': uuid,
-            },
-            **kwargs
-        )
+        super().create_or_update(filters={
+            'uuid': uuid,
+        }, **kwargs)
         kwargs['uuid'] = uuid
         logger.info(f'更新设备信息: {kwargs}')
 
@@ -194,7 +197,7 @@ class HeartBeatService(BaseService):
     def update(self, uuid, **kwargs):
         kwargs['modified_at'] = get_local_time()
         kwargs['timestamp'] = get_local_time()
-        res = super().update(filters={'uuid': uuid}, **kwargs)
+        super().create_or_update(filters={'uuid': uuid}, **kwargs)
         # logger.debug(f'update heartbeat: {res}')
         # return res
 
@@ -222,30 +225,22 @@ class LoginClientService(BaseService):
     db = LoginClient
 
     def update_login_status(self, username, uuid, client_id):
-        res = self.update(
-            filters={
-                'username': self.get_username(username),
-                'uuid': self.get_uuid(uuid),
-                'client_id': client_id,
-            },
-            login_status=True,
-        )
+        self.create_or_update(filters={
+            'username': self.get_username(username),
+            'uuid': self.get_uuid(uuid),
+            'client_id': client_id,
+        }, login_status=True)
 
         logger.info(f'更新登录状态: {username} - {uuid}')
-        return res
 
     def update_logout_status(self, username, uuid, client_id):
-        res = self.update(
-            filters={
-                'username': self.get_username(username),
-                'uuid': self.get_uuid(uuid),
-                'client_id': client_id,
-            },
-            login_status=False,
-        )
+        self.create_or_update(filters={
+            'username': self.get_username(username),
+            'uuid': self.get_uuid(uuid),
+            'client_id': client_id,
+        }, login_status=False)
 
         logger.info(f'更新登出状态: {username} - {uuid}')
-        return res
 
     def get_login_client_list(self, username) -> QuerySet[LoginClient]:
         return self.query(username=self.get_username(username)).all()
@@ -398,3 +393,66 @@ class LogService(BaseService):
         logger.info(
             f"创建日志: 用户=\"{username}\", UUID=\"{uuid}\", 类型=\"{log_type}\", 级别=\"{log_level}\", 消息=\"{log_message}\"")
         return log
+
+
+class AuditConnService(BaseService):
+    """
+    审计连接服务类
+
+    用于处理审计连接相关的业务逻辑
+    """
+    db = AutidConnLog
+
+    def get(self, conn_id, action='new') -> AutidConnLog:
+        return self.query(conn_id=conn_id, action=action).first()
+
+    def create_log(self, action, conn_id, initiating_ip, session_id, controlled_uuid, controller_uuid=None):
+        """
+        连接日志
+        :param action:
+        :param conn_id:
+        :param initiating_ip:
+        :param session_id:
+        :param controller_uuid:
+        :param controlled_uuid:
+        :param _type:
+        :return:
+        """
+        if controller_uuid:
+            controller_uuid = self.get_uuid(controller_uuid)
+        controlled_uuid = self.get_uuid(controlled_uuid)
+
+        data = {
+            'action': action,
+            'conn_id': conn_id,
+            'session_id': session_id,
+            'controller_uuid': controller_uuid,
+            'controlled_uuid': controlled_uuid,
+            'type': 0,
+        }
+        if initiating_ip:
+            data['initiating_ip'] = initiating_ip
+
+        log = self.create(**data)
+        return log
+
+    def update_log(self, conn_id, initiating_ip, session_id, controller_uuid, controlled_uuid, username='', _type=0):
+        controller_uuid = self.get_uuid(controller_uuid)
+        controlled_uuid = self.get_uuid(controlled_uuid)
+
+        data = {
+            'initiating_ip': initiating_ip,
+            'session_id': session_id,
+            'controller_uuid': controller_uuid,
+            'controlled_uuid': controlled_uuid,
+            'type': _type,
+        }
+        if username:
+            data['username'] = self.get_username(username)
+
+        return self.update(
+            filters={
+                'conn_id': conn_id,
+            },
+            **data,
+        )
