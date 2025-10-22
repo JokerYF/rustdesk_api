@@ -16,9 +16,3 @@ fi
 # 启动uWSGI
 echo "正在启动uWSGI..."
 uwsgi --ini uwsgi.ini &
-
-# 等待几秒钟以确保uWSGI启动
-echo "等待uWSGI启动..."
-sleep 5
-
-echo "uWSGI启动完成。"
