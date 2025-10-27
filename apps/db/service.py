@@ -1,14 +1,17 @@
+import json
 import logging
 from datetime import timedelta
 from typing import TypeVar
 
 from django.contrib.auth.models import User, Group, Permission
 from django.db import models
+from django.db import transaction
 from django.db.models import QuerySet
 from django.http import HttpRequest
 
 from apps.common.utils import get_local_time, get_randem_md5
-from apps.db.models import HeartBeat, SystemInfo, Token, LoginClient, TagToClient, Tag, UserToTag, Log, AutidConnLog
+from apps.db.models import HeartBeat, SystemInfo, Token, LoginClient, TagToClient, Tag, UserToTag, Log, AutidConnLog, \
+    UserPrefile
 
 logger = logging.getLogger(__name__)
 
@@ -116,18 +119,6 @@ class BaseService:
             uuid = SystemInfoService().get_client_info_by_uuid(uuid)
         return uuid
 
-    def filter_in(self, field, *args):
-        """
-        返回包含指定字段值的结果
-        :param field:
-        :param args:
-        :return:
-        """
-
-        return self.db.objects.filter(
-            eval(f'{field}__in=[*{args}]')
-        ).all()
-
 
 class UserService(BaseService):
     db = User
@@ -138,7 +129,11 @@ class UserService(BaseService):
         except self.db.DoesNotExist:
             return None
 
-    def create_user(self, username, password, email='', is_superuser=False, is_staff=False) -> User:
+    def get_users(self, *users):
+        return self.db.objects.filter(username__in=[*users]).all()
+
+    def create_user(self, username, password, email='', is_superuser=False, is_staff=False,
+                    group: str | Group = None) -> User:
         user = self.create(
             username=username,
             email=email,
@@ -148,12 +143,19 @@ class UserService(BaseService):
         user.set_password(password)
         user.save()
         logger.info(f'创建用户: {user}')
+
+        # 添加用户到组（确保参数顺序正确）
+        group_service = GroupService()
+        group_service.add_user_to_group(user, group_name=group)
+
         return user
 
     def get_user_by_email(self, email) -> User:
         return self.query(email=email).first()
 
     def get_user_by_name(self, username) -> User:
+        if isinstance(username, User):
+            return username
         return self.query(username=username).first()
 
     def set_password(self, password, email=None, username=None):
@@ -201,14 +203,29 @@ class UserService(BaseService):
     def get_list_by_status(self, status, page=1, page_size=10):
         return self.__get_list(status=status, page=page, page_size=page_size)
 
+    def get_guid(self, username):
+        user = self.get_user_by_name(username)
+        group_id = user.userprofile.group_id
+        collection_id = 1 if user.is_superuser else 0
+        return f'{group_id}-{user.id}-{collection_id}'
+
+    def parse_guid(self, guid):
+        guid_list = guid.split('-')
+        group_id = guid_list[0]
+        user_id = guid_list[1]
+        collection_id = guid_list[2]
+        group = GroupService().get_group_by_id(group_id)
+        user = self.get_user_by_id(user_id)
+        return group, user, bool(int(collection_id))  # TODO 第三个值应该返回地址簿ID，这里需要改
+
     def set_user_permissions(self, username, *permissions):
-        permissions = self.filter_in('codename', *permissions)
+        permissions = self.db.objects.filter(user_permissions__codename__in=[*permissions])
         user = self.get_user_by_name(username)
         if user:
             user.user_permissions.add(*permissions)
 
     def del_user_permissions(self, username, *permissions):
-        permissions = self.filter_in('codename', *permissions)
+        permissions = self.db.objects.filter(user_permissions__codename__in=[*permissions])
 
         user = self.get_user_by_name(username)
         if user:
@@ -221,18 +238,31 @@ class UserService(BaseService):
         return None
 
     def is_user_has_permission(self, username, *permissions) -> bool:
-        permissions = self.filter_in('codename', *permissions)
+        permissions = self.db.objects.filter(user_permissions__codename__in=[*permissions])
         user = self.get_user_by_name(username)
         if user:
             return user.has_perm(*permissions)
         return False
 
+    def get_user_by_id(self, user_id) -> User:
+        return self.query(id=user_id).first()
+
 
 class GroupService(BaseService):
     db = Group
 
+    def __init__(self):
+        self.default_group_name = 'Default'
+
     def get_group_by_name(self, name) -> Group:
-        return self.query(name=name).first()
+        if isinstance(name, str):
+            return self.query(name=name).first()
+        return name
+
+    def get_group_by_id(self, id) -> Group:
+        if isinstance(id, str):
+            return self.query(id=id).first()
+        return id
 
     def create_group(self, name, permissions=None) -> Group:
         if permissions is None:
@@ -242,12 +272,69 @@ class GroupService(BaseService):
         logger.info(f'创建用户组: {group}')
         return group
 
-    def add_user_to_group(self, group_name, *username: User | str):
+    def default_group(self):
+        """
+        创建默认用户组
+        :return:
+        """
+        group = self.get_group_by_name(self.default_group_name)
+        if not group:
+            group = self.create_group(name=self.default_group_name)
+        return group
+
+    def add_user_to_group(self, *username: User | str, group_name: Group | str = None):
+        """
+        为用户设置所在组（高效批量）。
+
+        通过一次性查询现有 `UserPrefile`，区分需要更新与新建的记录，分别使用
+        `bulk_update` 与 `bulk_create`，显著减少 SQL 次数，确保“用户仅一个组”。
+
+        :param username: 用户对象或用户名字符串，可变参数，支持批量
+        :param group_name: 目标组对象或组名字符串；为空则加入默认组
+        :returns: None
+        """
+        group_name = group_name or self.default_group_name
         group = self.get_group_by_name(group_name)
-        # 批量获取用户并添加到组中
-        users = UserService().db.objects.filter(username__in=username)
-        if users.exists():
-            group.user_set.add(*users)
+        if not group:
+            group = self.default_group()
+
+        user_service = UserService()
+        user_objs: list[User] = []
+        for item in username:
+            if isinstance(item, User):
+                user_objs.append(item)
+            elif isinstance(item, str):
+                if u := user_service.get_user_by_name(item):
+                    user_objs.append(u)
+            else:
+                continue
+
+        if not user_objs:
+            return
+
+        user_ids = [u.id for u in user_objs]
+
+        with transaction.atomic():
+            # 一次性读取已有的 Profile
+            existing_profiles = UserPrefile.objects.filter(user_id__in=user_ids)
+            user_id_to_profile = {p.user_id: p for p in existing_profiles}
+
+            to_update: list[UserPrefile] = []
+            to_create: list[UserPrefile] = []
+
+            for u in user_objs:
+                if u.id in user_id_to_profile:
+                    profile = user_id_to_profile[u.id]
+                    if profile.group_id != group.id:
+                        profile.group = group
+                        to_update.append(profile)
+                else:
+                    to_create.append(UserPrefile(user=u, group=group))
+
+            if to_update:
+                UserPrefile.objects.bulk_update(to_update, ['group'])
+            if to_create:
+                UserPrefile.objects.bulk_create(to_create)
 
 
 class PermissionService(BaseService):
@@ -412,16 +499,24 @@ class TokenService(BaseService):
         logger.info(f"通过uuid删除令牌: {uuid}")
         return res
 
+    def delete_token_by_user(self, username: User | str):
+        if isinstance(username, User):
+            username = username.username
+        res = self.delete(username=username)
+        logger.info(f"通过用户名删除令牌: {username}")
+        return res
+
     # def get_user_info_by_token(self, token) -> User | None:
     #     if username := self.query(token=token).first().username:
     #         return UserService().get_user_by_name(username)
     #     return None
 
     @staticmethod
-    def get_user_token(request: HttpRequest) -> tuple[str, User]:
+    def get_request_info(request: HttpRequest) -> tuple[str, User, dict]:
         authorization = request.headers.get('Authorization')[7:]
         username = authorization.split('_')[-1]
-        return authorization, UserService().get_user_by_name(username)
+        body = json.loads(request.body) if request.body else {}
+        return authorization, UserService().get_user_by_name(username), body
 
     def get_cur_uuid_by_token(self, token) -> str | None:
         if uuid := self.query(token=token).first().uuid:
@@ -440,16 +535,19 @@ class TagService:
     db_tag2client = TagToClient
     db_user2tag = UserToTag
 
-    def __init__(self, username):
-        self.username = username
+    def __init__(self, username: User | str):
+        self.username = UserService().get_username(username)
 
-    def create_tag(self, tag, color):
-        _tag, created = self.db_tag.objects.get_or_create(tag=tag, defaults={'color': color})
+    def create_tag(self, tag, color, tag_type='user'):
+        _tag, created = self.db_tag.objects.get_or_create(tag=tag, defaults={'color': color, 'tag_type': tag_type})
         if created:
             self.db_user2tag.objects.create(tag_id_id=_tag.id, username=self.username)
 
-    def delete_tag(self, tag):
-        self.db_tag.objects.filter(tag=tag)
+    def delete_tag(self, *tag):
+        if self.username.is_superuser:
+            self.db_tag.objects.filter(tag__in=tag).delete()
+        else:
+            self.db_tag.objects.filter(tag__in=tag, tag_type='user').delete()
 
     def update_tag(self, tag, color=None, new_tag=None):
         data = {}
@@ -457,7 +555,7 @@ class TagService:
             data['color'] = color
         if new_tag:
             data['tag'] = new_tag
-        return self.db_tag.objects.filter(tag=tag).update(**data)
+        return self.db_tag.objects.filter(tag=tag, tag_type='user').update(**data)
 
     def get_all_tags(self):
         """
@@ -465,8 +563,13 @@ class TagService:
 
         :return: QuerySet of Tag objects associated with the current user
         """
-        user_tags = self.db_user2tag.objects.filter(username=self.username).select_related('tag_id')
-        return [ut.tag_id for ut in user_tags]
+        user_tags = self.username.usertotag_set.all()
+        sys_tags = self.get_system_tags()
+        tags = list(user_tags) + list(sys_tags)
+        return list(set(tags))
+
+    def get_system_tags(self):
+        return self.db_tag.objects.filter(tag_type='system').all()
 
     def add_tag_to_client(self, tag, client_id):
         return self.db_tag2client.objects.get_or_create(tag=tag, client_id=client_id)
@@ -529,7 +632,6 @@ class AuditConnService(BaseService):
         :param session_id:
         :param controller_uuid:
         :param controlled_uuid:
-        :param _type:
         :return:
         """
         if controller_uuid:

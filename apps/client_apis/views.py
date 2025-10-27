@@ -3,7 +3,7 @@ import logging
 import traceback
 
 from django.contrib.auth.models import User
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, JsonResponse, HttpResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
@@ -91,8 +91,7 @@ def login(request: HttpRequest):
 
     try:
         user = User.objects.get(username=username)
-        if not user.check_password(password):
-            raise
+        assert user.check_password(password)
     except User.DoesNotExist as e:
         logger.error(traceback.format_exc())
         return JsonResponse({'error': '用户名或密码错误'})
@@ -131,7 +130,7 @@ def logout(request: HttpRequest):
     body = json.loads(request.body.decode('utf-8'))
     uuid = body.get('uuid')
     token_service = TokenService()
-    token, user_info = token_service.get_user_token(request)
+    token, user_info, body = token_service.get_request_info(request)
     token_service.delete_token(token)
 
     # 更新登出状态
@@ -144,7 +143,7 @@ def logout(request: HttpRequest):
     LogService().create_log(
         username=user_info,
         uuid=uuid,
-        log_type='login',
+        log_type='logout',
         log_message=f'用户 {user_info} 退出登录'
     )
     return JsonResponse({'code': 1})
@@ -174,7 +173,7 @@ def ab(request: HttpRequest):
         )
     elif request.method == 'POST':
         token_service = TokenService()
-        token, user_info = token_service.get_user_token(request)
+        token, user_info, body = token_service.get_request_info(request)
         body = json.loads(request.body.decode('utf-8'))
         data = json.loads(body.get('data')) if body.get('data') else {}
 
@@ -201,19 +200,15 @@ def ab_personal(request: HttpRequest):
     :return:
     """
     token_service = TokenService()
-    token, user_info = token_service.get_user_token(request)
-    tag_service = TagService(user_info)
-    data = {}
-    tags = tag_service.get_all_tags()
-    data['tags'] = [tag.tag for tag in tags]
-    data['tag_colors'] = json.dumps({tag.tag: int(tag.color) for tag in tags})
-    data['peers'] = []
-    result = {
-        'data': json.dumps(data),
-        'code': 1,
-        'updated_at': get_local_time().isoformat()
-    }
-    return JsonResponse(result)
+    token, user_info, body = token_service.get_request_info(request)
+    user_service = UserService()
+    return JsonResponse(
+        {
+            "guid": user_service.get_guid(user_info),
+            "name": user_info.username,
+            "rule": 3
+        }
+    )
 
 
 @require_http_methods(["POST"])
@@ -226,7 +221,7 @@ def current_user(request: HttpRequest):
     :return:
     """
     token_service = TokenService()
-    token, user_info = token_service.get_user_token(request)
+    token, user_info, body = token_service.get_request_info(request)
 
     return JsonResponse(
         {
@@ -250,7 +245,7 @@ def users(request: HttpRequest):
     page_size = int(request.GET.get('pageSize', 10))
     status = int(request.GET.get('status', 1))
     token_service = TokenService()
-    token, user_info = token_service.get_user_token(request)
+    token, user_info, body = token_service.get_request_info(request)
     if user_info.is_superuser:
         result = UserService().get_list_by_status(status=status, page=page, page_size=page_size)['results']
     else:
@@ -291,7 +286,7 @@ def peers(request: HttpRequest):
     page_size = int(request.GET.get('pageSize', 10))
 
     token_service = TokenService()
-    token, user_info = token_service.get_user_token(request)
+    token, user_info, body = token_service.get_request_info(request)
     uuid = token_service.get_cur_uuid_by_token(token)
 
     if user_info.is_superuser:
@@ -335,7 +330,7 @@ def device_group_accessible(request):
     page_size = int(request.GET.get('pageSize', 10))
 
     token_service = TokenService()
-    token, user_info = token_service.get_user_token(request)
+    token, user_info, body = token_service.get_request_info(request)
     uuid = token_service.get_cur_uuid_by_token(token)
 
     if user_info.is_superuser:
@@ -419,7 +414,6 @@ def audit_conn(request: HttpRequest):
             username=str(peer[1]).lower() if peer else None
         )
 
-
     return JsonResponse(
         {
             'code': 1,
@@ -442,6 +436,139 @@ def audit_file(request):
     # {"id":"488591401","info":"{\\"files\\":[[\\"\\",52923]],\\"ip\\":\\"172.16.41.91\\",\\"name\\":\\"Admin\\",\\"num\\":1}","is_file":true,"path":"C:\\\\Users\\\\Joker\\\\Downloads\\\\api_swagger.json","peer_id":"1508540501","type":1,"uuid":"MjI5MzdiMDAtNjExNy00OTVmLWFjNWUtNGM2MTc2NTE1Zjdl"}
     # {"id":"488591401","info":"{\\"files\\":[[\\"\\",801524]],\\"ip\\":\\"172.16.41.91\\",\\"name\\":\\"Admin\\",\\"num\\":1}","is_file":true,"path":"C:\\\\Users\\\\Joker\\\\Downloads\\\\782K.ofd","peer_id":"1508540501","type":0,"uuid":"MjI5MzdiMDAtNjExNy00OTVmLWFjNWUtNGM2MTc2NTE1Zjdl"}
 
+    return JsonResponse(
+        {
+            'code': 1,
+            'data': {
+                'status': 1,
+                'message': 'success'
+            }
+        }
+    )
+
+
+@require_http_methods(["POST"])
+@request_debug_log
+@check_login
+def ap_peers(request):
+    return JsonResponse(
+        {
+            'code': 1,
+            'data': {
+                'status': 1,
+                'message': 'success'
+            }
+        }
+    )
+
+
+@require_http_methods(["POST"])
+@request_debug_log
+@check_login
+def ab_tags(request, guid):
+    token_service = TokenService()
+    token, user_info, body = token_service.get_request_info(request)
+
+    tag_service = TagService(user_info)
+    tags = tag_service.get_all_tags()
+    data = [
+        {
+            'name': tag.tag_id.tag,
+            'color': int(tag.tag_id.color),
+            'type': tag.tag_id.tag_type,
+        } for tag in tags
+    ]
+    return JsonResponse(data, safe=False, status=200)
+
+
+@require_http_methods(["POST"])
+@request_debug_log
+@check_login
+def ab_tag_add(request, guid):
+    body = json.loads(request.body)
+    tag = body.get('name')
+    color = body.get('color')
+
+    token_service = TokenService()
+    token, user_info, body = token_service.get_request_info(request)
+    tag_service = TagService(user_info)
+    tag_service.create_tag(tag=tag, color=color)
+    return HttpResponse(status=200)
+
+
+@require_http_methods(["PUT"])
+@request_debug_log
+@check_login
+def ab_tag_rename(request, guid):
+    token_service = TokenService()
+    token, user_info, body = token_service.get_request_info(request)
+
+    tag_old = body.get('old')
+    tag_new = body.get('new')
+
+    tag_service = TagService(user_info)
+    tag_service.update_tag(tag=tag_old, new_tag=tag_new)
+    return HttpResponse(status=200)
+
+
+@require_http_methods(["DELETE"])
+@request_debug_log
+@check_login
+def ab_tag(request, guid):
+    token_service = TokenService()
+    token, user_info, body = token_service.get_request_info(request)
+    tags = body
+    tag_service = TagService(user_info)
+    tag_service.delete_tag(*list(tags))
+
+    return HttpResponse(status=200)
+
+
+@require_http_methods(["POST"])
+@request_debug_log
+@check_login
+def ab_settings(request):
+    return JsonResponse(
+        {
+            "max_peer_one_ab": 0
+        }
+    )
+
+
+@request_debug_log
+def ab_shared_profiles(request):
+    return JsonResponse(
+        {
+            "total": 0,
+            "data": [
+                {
+                    "guid": "1-1001-12",
+                    "name": "研发部地址簿",
+                    "owner": "alice",
+                    "note": "",
+                    "rule": 3
+                },
+                {
+                    "guid": "1-1002-34",
+                    "name": "IT支持共享",
+                    "owner": "bob",
+                    "note": "",
+                    "rule": 2
+                },
+                {
+                    "guid": "1-1003-56",
+                    "name": "外包协作",
+                    "owner": "carol",
+                    "note": "",
+                    "rule": 1
+                }
+            ]
+        }
+    )
+
+
+@request_debug_log
+def ab_peers(request):
     return JsonResponse(
         {
             'code': 1,

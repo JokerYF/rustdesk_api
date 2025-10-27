@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.db import models
 
 
@@ -49,6 +49,16 @@ class SystemInfo(models.Model):
         return f'{self.device_name} ({self.uuid})'
 
 
+class UserToSystem(models.Model):
+    username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
+    uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
+
+    class Meta:
+        verbose_name = '用户与设备关系'
+        verbose_name_plural = '用户与设备关系'
+        db_table = 'user_to_system'
+
+
 class Tag(models.Model):
     """
     标签模型
@@ -59,6 +69,8 @@ class Tag(models.Model):
     id = models.AutoField(primary_key=True)
     tag = models.CharField(max_length=255, unique=True, verbose_name='标签名称')
     color = models.CharField(max_length=50, verbose_name='标签颜色')
+    tag_type = models.CharField(max_length=50, verbose_name='标签类型',
+                                choices=[('system', '系统标签'), ('user', '用户标签')])
 
     class Meta:
         verbose_name = '标签'
@@ -197,3 +209,20 @@ class AuditFileLog(models.Model):
         verbose_name_plural = '审计文件'
         ordering = ['-created_at']
         db_table = 'audit_file'
+
+
+class UserPrefile(models.Model):
+    """
+    用户配置模型
+    """
+    user = models.OneToOneField(User, to_field='id', on_delete=models.CASCADE, related_name='userprofile')
+    group = models.ForeignKey(Group, to_field='id', on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='userprofile_group')
+
+    class Meta:
+        verbose_name = '用户配置'
+        verbose_name_plural = '用户配置'
+        db_table = 'user_profile'
+
+    def __str__(self):
+        return f'{self.user.username} {self.group.name if self.group else "None"}'

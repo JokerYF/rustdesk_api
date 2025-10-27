@@ -20,9 +20,9 @@ def check_login(func):
     def wrapper(request: HttpRequest, *args, **kwargs):
         headers = request.headers
         if 'Authorization' not in headers:
-            return JsonResponse({'error': 'NOT LOGGED IN'}, status=401)
+            return JsonResponse({'error': 'Invalid token'}, status=401)
         token_service = TokenService()
-        token, user_info = token_service.get_user_token(request)
+        token, user_info, body = token_service.get_request_info(request)
         uuid = token_service.get_cur_uuid_by_token(token)
 
         system_info = SystemInfoService()
@@ -34,7 +34,7 @@ def check_login(func):
                 username=user_info.username,
                 client_id=client_info.client_id,
             )
-            return JsonResponse({'error': 'LOGIN EXPIRED'}, status=401)
+            return JsonResponse({'error': 'Invalid token'}, status=401)
         token_service.update_token(token)
         return func(request, *args, **kwargs)
 
@@ -48,6 +48,7 @@ def request_debug_log(func):
     :param func: 被装饰的函数
     :return: 装饰后的函数
     """
+
     def wrapper(request: HttpRequest, *args, **kwargs):
         __uuid = get_randem_md5()
         request_log = {
@@ -62,12 +63,12 @@ def request_debug_log(func):
 
         logger.debug(f'[{__uuid}]request: {json.dumps(request_log)}')
         response = func(request, *args, **kwargs)
-        response_log = json.dumps(
-            {
-                'status_code': response.status_code,
-                'response_body': json.loads(response.content),
-            }
-        )
+        response_data = {
+            'status_code': response.status_code,
+        }
+        if response.content:
+            response_data['response_body'] = json.loads(response.content)
+        response_log = json.dumps(response_data)
         logger.debug(f'[{__uuid}]response: {response_log}')
         return response
 

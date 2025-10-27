@@ -14,12 +14,6 @@ class Command(BaseCommand):
         :param parser: 参数解析器对象
         """
         parser.add_argument(
-            '--set-pwd',
-            type=str,
-            help='指定新的admin密码',
-        )
-
-        parser.add_argument(
             '--init',
             action='store_true',
             help='初始化管理员账号',
@@ -37,6 +31,12 @@ class Command(BaseCommand):
             help='指定用户密码',
         )
 
+        parser.add_argument(
+            '--group',
+            type=str,
+            help='指定用户组',
+        )
+
     def handle(self, *args, **options):
         """处理命令逻辑。
 
@@ -44,6 +44,7 @@ class Command(BaseCommand):
         """
         user_service = UserService()
         group_service = GroupService()
+        default_group = group_service.default_group()
 
         if options.get('init'):
             pwd = uuid.uuid1().hex[-8:]
@@ -55,35 +56,18 @@ class Command(BaseCommand):
                     is_superuser=True,
                     is_staff=True
                 )
-                group = group_service.create_group('Default')
-                group_service.add_user_to_group(user, group)
+                group_service.add_user_to_group(user, group_name=default_group)
                 print(f'管理员账号初始化成功，管理员密码：{pwd}')
             else:
                 print('管理员账号已存在')
-
-
-        elif new_pwd := options.get('set_pwd'):
-            if user := user_service.get_user_by_name('admin'):
-                user.set_password(new_pwd)
-                user.save()
-                print('管理员密码修改成功')
-            else:
-                print('管理员账号不存在')
-                user_service.create_user(
-                    username='admin',
-                    password=new_pwd,
-                    email='',
-                    is_superuser=True,
-                    is_staff=True
-                )
-                print(f'管理员账号初始化成功，管理员密码：{new_pwd}')
 
         elif options.get('user') and options.get('passwd'):
             username = options.get('user')
             password = options.get('passwd')
 
-            if user_service.get_user_by_name(username):
-                print(f'用户 {username} 已存在')
+            if user := user_service.get_user_by_name(username):
+                user.set_password(password)
+                print(f'用户 {username} 已存在，已更新密码 {password}')
             else:
                 user_service.create_user(
                     username=username,
@@ -92,6 +76,13 @@ class Command(BaseCommand):
                     is_superuser=False,
                     is_staff=True
                 )
-                print(f'用户 {username} 创建成功')
+                print(f'用户 {username} 创建成功，密码 {password}')
+        elif options.get('group') and options.get('user'):
+            group_name = options.get('group')
+            user_name = options.get('user')
+            group_service.add_user_to_group(user_name, group_name=group_name)
+        elif options.get('group'):
+            group_name = options.get('group')
+            group_service.create_group(group_name)
         else:
             print('参数错误')
