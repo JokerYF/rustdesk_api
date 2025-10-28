@@ -297,7 +297,7 @@ def peers(request: HttpRequest):
     uuid = token_service.get_cur_uuid_by_token(token)
 
     if user_info.is_superuser:
-        client_list = SystemInfoService().get_list(page=page, page_size=page_size)['results']
+        client_list = SystemInfoService().get_list()
     else:
         client_list = LoginClientService().get_login_client_list(user_info)
     data = []
@@ -340,7 +340,7 @@ def device_group_accessible(request):
     user_info = token_service.user_info
 
     if user_info.is_superuser:
-        client_list = SystemInfoService().get_list(page=page, page_size=page_size)['results']
+        client_list = SystemInfoService().get_list()
     else:
         # client_list = LoginClientService().get_login_client_list(user_info.username)
         return JsonResponse(
@@ -545,23 +545,14 @@ def ab_shared_profiles(request):
                 {
                     "guid": "1-1001-12",
                     "name": "研发部地址簿",
-                    "owner": "alice",
-                    "note": "",
-                    "rule": 3
                 },
                 {
                     "guid": "1-1002-34",
                     "name": "IT支持共享",
-                    "owner": "bob",
-                    "note": "",
-                    "rule": 2
                 },
                 {
                     "guid": "1-1003-56",
                     "name": "外包协作",
-                    "owner": "carol",
-                    "note": "",
-                    "rule": 1
                 }
             ]
         }

@@ -364,10 +364,8 @@ class SystemInfoService(BaseService):
         self.db.objects.update_or_create(uuid=uuid, defaults=kwargs)
         logger.info(f"更新设备信息: {kwargs}")
 
-    def get_list(self, page=1, page_size=10):
-        res = super().get_list(page=page, page_size=page_size)
-        logger.debug(f"SystemInfo list: {res}")
-        return res
+    def get_list(self):
+        return self.db.objects.all()
 
 
 class HeartBeatService(BaseService):
