@@ -15,11 +15,8 @@ import os
 from pathlib import Path
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# 自动创建日志目录
-Path(BASE_DIR / 'logs').mkdir(exist_ok=True)
+from base import BASE_DIR
+from rustdesk_api.common.db_config import db_config
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -79,11 +76,15 @@ WSGI_APPLICATION = 'rustdesk_api.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': db_config()
 }
 
 # Password validation
@@ -139,10 +140,9 @@ LOGGING = {
             'formatter': 'verbose',
         },
         'console': {
-            'level': 'DEBUG',
+            'level': 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'verbose' if DEBUG else 'simple',
-            'filters': ['require_debug_true'],
         },
     },
     'filters': {

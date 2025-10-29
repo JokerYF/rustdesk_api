@@ -1,0 +1,23 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# IDE
+.idea/
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# Project artifacts
+logs/
+*.log
+uwsgi.pid
+
+# Local database (avoid copying into image)
+db.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db

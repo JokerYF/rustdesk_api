@@ -226,8 +226,7 @@ class UserPrefile(models.Model):
     用户配置模型
     """
     user = models.OneToOneField(User, to_field='id', on_delete=models.CASCADE, related_name='userprofile')
-    group = models.ForeignKey(Group, to_field='id', on_delete=models.SET_NULL,
-                              related_name='userprofile_group')
+    group = models.ForeignKey(Group, to_field='id', on_delete=models.CASCADE, related_name='userprofile_group')
 
     class Meta:
         verbose_name = '用户配置'

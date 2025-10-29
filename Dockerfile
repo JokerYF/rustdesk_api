@@ -1,7 +1,6 @@
 # 使用Python官方镜像作为基础镜像
 FROM python:3.13-slim
 
-# 设置环境变量
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -12,23 +11,18 @@ RUN apt-get update && apt-get install -y \
 
 # 复制项目代码
 COPY . /app
-
-# 设置工作目录
 WORKDIR /app
 
-RUN pip install uv && uv sync
+RUN pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
-# 创建日志目录和.env文件
 RUN if [ ! -f .env ]; then touch .env; fi
 
-# 设置权限
-RUN chmod +x start.sh
-
-# 暴露端口
 EXPOSE 21114
 
-# 设置环境变量
 ENV ENV_FILE=.env
 
-# 启动应用
+VOLUME ["/app/logs", "/app/data"]
+
+RUN chmod +x start.sh
+
 CMD ["./start.sh"]
