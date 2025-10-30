@@ -2,7 +2,7 @@ import uuid
 
 from django.core.management.base import BaseCommand
 
-from apps.db.service import UserService, GroupService
+from apps.db.service import UserService, GroupService, TokenService
 
 
 class Command(BaseCommand):
@@ -65,6 +65,7 @@ class Command(BaseCommand):
 
             if user := user_service.get_user_by_name(username):
                 user.set_password(password)
+                TokenService().delete_token_by_user(user.username)
                 print(f'用户 {username} 已存在，已更新密码 {password}')
             else:
                 user_service.create_user(
