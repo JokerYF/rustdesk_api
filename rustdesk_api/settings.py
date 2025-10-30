@@ -17,6 +17,7 @@ from pathlib import Path
 
 from base import BASE_DIR
 from rustdesk_api.common.db_config import db_config
+from rustdesk_api.common.env import PublicConfig
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -25,7 +26,7 @@ from rustdesk_api.common.db_config import db_config
 SECRET_KEY = 'django-insecure-)io=oztl360$7mt#&d86kecbaklz^w==@toytn#qepbitg2@hr'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = PublicConfig.DEBUG
 
 ALLOWED_HOSTS = ['*']
 

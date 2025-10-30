@@ -3,12 +3,15 @@ version: "3.8"
 services:
   app:
     container_name: rustdesk_api
-    image: swr.cn-north-4.myhuaweicloud.com/yufeng-yf/rustdesk_api:latest
+    image: rustdesk_api:${VERSION:-latest}
+    # 若需本地调试或首次运行前未构建镜像，可临时改为：
+    # build: .
     restart: unless-stopped
     ports:
       - "21114:21114"
     environment:
       - DATABASE=sqlite3
+      - DEBUG=true
       - TZ=Asia/Shanghai
     volumes:
       - ./logs:/app/logs
