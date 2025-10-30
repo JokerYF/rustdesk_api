@@ -5,7 +5,8 @@ triggers:
   trigger: auto
   push:
     tags:
-      - "v*.*.*"
+      prefix:
+        - v
 stages:
   - name: stage-7b412ea2
     displayName: 构建docker
