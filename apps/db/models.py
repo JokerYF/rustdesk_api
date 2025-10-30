@@ -187,9 +187,9 @@ class AutidConnLog(models.Model):
                                         verbose_name='控制端UUID', related_name='auditlog_controller', null=True)
     controlled_uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE,
                                         verbose_name='被控端UUID', related_name='auditlog_controlled')
-    type = models.IntegerField(verbose_name='类型')
+    type = models.IntegerField(verbose_name='类型', default=0)
     username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, max_length=50,
-                                 verbose_name='用户名', null=True)
+                                 verbose_name='发起连接的用户', null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
     class Meta:

@@ -664,6 +664,61 @@ class AuditConnService(BaseService):
     def get(self, conn_id, action="new") -> AutidConnLog:
         return self.db.objects.filter(conn_id=conn_id, action=action).first()
 
+    def log(
+            self,
+            conn_id,
+            action,
+            controlled_uuid,
+            source_ip,
+            session_id,
+            controller_peer_id=None,
+            type_=0,
+            username=None
+    ):
+        """
+        记录日志
+        :param username:
+        :param type_:
+        :param controller_peer_id:
+        :param conn_id:
+        :param action:
+        :param controlled_uuid:
+        :param source_ip:
+        :param session_id:
+        :return:
+        """
+        if action:
+            if action == "new":
+                self.db.objects.create(
+                    conn_id=conn_id,
+                    action=action,
+                    controlled_uuid=self.get_peer_by_uuid(controlled_uuid),
+                    initiating_ip=source_ip,
+                    session_id=session_id,
+                )
+            else:
+                connect_log = self.db.objects.filter(
+                    conn_id=conn_id,
+                    action="new",
+                ).first()
+                self.db.objects.create(
+                    conn_id=conn_id,
+                    action=action,
+                    controlled_uuid=self.get_peer_by_uuid(controlled_uuid),
+                    controller_uuid=connect_log.controlled_uuid,
+                    initiating_ip=connect_log.initiating_ip,
+                    session_id=session_id,
+                    username=connect_log.username,
+                    type=connect_log.type,
+                )
+        else:
+            self.db.objects.filter(conn_id=conn_id).update(
+                session_id=session_id,
+                controller_uuid=self.get_peer_by_peer_id(controller_peer_id),
+                username=self.get_username(username),
+                type=type_,
+            )
+
     def create_log(
             self,
             action,

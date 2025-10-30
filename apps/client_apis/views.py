@@ -211,7 +211,6 @@ def ab_personal(request: HttpRequest):
         {
             "guid": guid,
             "name": user_info.username,
-            "rule": 3
         }
     )
 
@@ -375,47 +374,27 @@ def audit_conn(request: HttpRequest):
     ip = body.get('ip', '')
     controlled_uuid = body.get('uuid')
     session_id = body.get('session_id')
-    peer = body.get('peer')
+    type_ = body.get('type', 0)
+    username = ''  # 发起者
+    peer_id = ''  # 发起者peer id
+    if peer := body.get('peer'):
+        username = str(peer[-1]).lower()
+        peer_id = peer[0]
+
 
     audit_service = AuditConnService()
-    if action:
-        audit_service.create_log(
-            action=action,
-            conn_id=conn_id,
-            initiating_ip=ip,
-            # controller_uuid=uuid,
-            controlled_uuid=controlled_uuid,
-            session_id=session_id
-        )
-        if action == 'close':
-            add_log = audit_service.get(conn_id, action='new')
-            audit_service.update(
-                filters={
-                    'action': action,
-                    'conn_id': conn_id
-                }, username=UserService().get_username(add_log.username)
-            )
-    else:
-        system_info = SystemInfoService()
-        audit_service.update_log(
-            conn_id=conn_id,
-            initiating_ip=ip,
-            controller_uuid=system_info.get_client_info_by_client_id(peer[0]),
-            controlled_uuid=controlled_uuid,
-            session_id=session_id,
-            _type=int(body.get('type')),
-            username=str(peer[1]).lower() if peer else None
-        )
-
-    return JsonResponse(
-        {
-            'code': 1,
-            'data': {
-                'status': 1,
-                'message': 'success'
-            }
-        }
+    audit_service.log(
+        conn_id=conn_id,
+        action=action,
+        controlled_uuid=controlled_uuid,
+        source_ip=ip,
+        session_id=session_id,
+        controller_peer_id=peer_id,
+        type_=type_,
+        username=username
     )
+
+    return HttpResponse(status=200)
 
 
 @require_http_methods(["POST"])
@@ -650,19 +629,17 @@ def ab_peer_update(request, guid):
     token_service = TokenService(request=request)
     body = token_service.request_body
     peer_id = body.get('id')
-    alias = body.get('alias', '')
-    tags = body.get('tags', '')
 
     if 'alias' in body.keys():
         AliasService().set_alias(
             guid=guid,
             peer_id=peer_id,
-            alias=alias
+            alias=body.get('alias', '')
         )
     if 'tags' in body.keys():
         TagService(guid=guid).set_tag_by_peer_id(
             peer_id=peer_id,
-            tags=tags,
+            tags=body.get('tags', ''),
         )
     return HttpResponse(status=200)
 
