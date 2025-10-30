@@ -26,4 +26,4 @@ Thumbs.db
 docker_build.sh
 docker-compose.yml
 docker-compose-dev.yml
-*.md
+notes
