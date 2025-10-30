@@ -15,11 +15,7 @@ WORKDIR /app
 
 RUN pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
-RUN if [ ! -f .env ]; then touch .env; fi
-
 EXPOSE 21114
-
-ENV ENV_FILE=.env
 
 VOLUME ["/app/logs", "/app/data"]
 
