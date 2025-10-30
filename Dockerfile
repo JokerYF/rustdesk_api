@@ -1,5 +1,5 @@
 # 使用Python官方镜像作为基础镜像
-FROM python:3.13-slim
+FROM docker.1ms.run/python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
