@@ -62,7 +62,7 @@ class UserToSystem(models.Model):
 
 
 class Personal(models.Model):
-    guid = models.CharField(max_length=50, verbose_name='GUID', default=get_uuid(), unique=True)
+    guid = models.CharField(max_length=50, verbose_name='GUID', default=get_uuid, unique=True)
     personal_name = models.CharField(max_length=50, verbose_name='地址簿名称')
     create_user = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, related_name='personal_create_user')
     personal_type = models.CharField(verbose_name='地址簿类型', default='public',
