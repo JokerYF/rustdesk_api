@@ -19,7 +19,7 @@ stages:
         displayName: Python 构建
         pythonVersion: '3.9'
         commands:
-          - echo $GITEE_TAG
+          - echo ${GITEE_TAG}
         artifacts:
           - name: BUILD_ARTIFACT
             path:
