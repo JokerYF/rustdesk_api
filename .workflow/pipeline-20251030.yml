@@ -19,7 +19,7 @@ stages:
         displayName: 镜像构建
         type: cert
         certificate: dcc590d0-9775-013e-14cd-46055990ae55
-        tag: rustdesk_api:${GITEE_TAG}
+        tag: rustdesk_api:$GITEE_TAG
         dockerfile: ./Dockerfile
         context: ''
         artifacts: []
