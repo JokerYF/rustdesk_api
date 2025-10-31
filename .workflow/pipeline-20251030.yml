@@ -24,7 +24,8 @@ stages:
         context: ''
         artifacts: []
         isCache: false
-        parameter: {}
+        parameter:
+          APP_VERSION: ${GITEE_BRANCH}
         notify: []
         strategy:
           retry: '0'
@@ -39,7 +40,8 @@ stages:
         context: ''
         artifacts: []
         isCache: false
-        parameter: {}
+        parameter:
+          APP_VERSION: ${GITEE_BRANCH}
         notify: []
         strategy:
           retry: '0'
