@@ -7,13 +7,18 @@ from apps.common.utils import get_uuid
 # Create your models here.
 
 class HeartBeat(models.Model):
-    client_id = models.CharField(max_length=255, verbose_name='客户端ID')
+    """
+    心跳测试模型
+    """
+    client_id = models.CharField(max_length=255, verbose_name='客户端ID', unique=True)
     modified_at = models.DateTimeField(verbose_name='修改时间')
     uuid = models.CharField(max_length=255, verbose_name='设备UUID', unique=True)
     timestamp = models.DateTimeField(verbose_name='记录时间')
     ver = models.CharField(max_length=255, default='', null=True, verbose_name='版本号')
 
     class Meta:
+        verbose_name = '心跳测试'
+        verbose_name_plural = verbose_name
         ordering = ['-modified_at']
         db_table = 'heartbeat'
 
@@ -21,16 +26,8 @@ class HeartBeat(models.Model):
 class SystemInfo(models.Model):
     """
     系统信息模型
-    
-    :param cpu: CPU型号及核心配置
-    :param device_name: 主机名称
-    :param memory: 内存容量
-    :param os: 操作系统版本
-    :param username: 系统用户名
-    :param uuid: 设备唯一标识
-    :param version: 客户端版本号
     """
-    client_id = models.CharField(max_length=255, verbose_name='客户端ID')
+    client_id = models.CharField(max_length=255, verbose_name='客户端ID', unique=True)
     cpu = models.TextField(verbose_name='CPU信息')
     device_name = models.CharField(max_length=255, verbose_name='主机名')
     memory = models.CharField(max_length=50, verbose_name='内存')
@@ -52,6 +49,9 @@ class SystemInfo(models.Model):
 
 
 class UserToSystem(models.Model):
+    """
+    用户与设备关系模型
+    """
     username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
     uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
 
@@ -62,6 +62,9 @@ class UserToSystem(models.Model):
 
 
 class Personal(models.Model):
+    """
+    地址簿
+    """
     guid = models.CharField(max_length=50, verbose_name='GUID', default=get_uuid, unique=True)
     personal_name = models.CharField(max_length=50, verbose_name='地址簿名称')
     create_user = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, related_name='personal_create_user')
@@ -70,8 +73,8 @@ class Personal(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
     class Meta:
-        verbose_name = '个人地址簿'
-        verbose_name_plural = '个人地址簿'
+        verbose_name = '地址簿'
+        verbose_name_plural = '地址簿'
         ordering = ['-created_at']
         db_table = 'personal'
 
@@ -79,18 +82,16 @@ class Personal(models.Model):
 class Tag(models.Model):
     """
     标签模型
-
-    :param tag: 标签名称
-    :param color: 标签描述
     """
     id = models.AutoField(primary_key=True)
-    tag = models.CharField(max_length=255, unique=True, verbose_name='标签名称')
+    tag = models.CharField(max_length=255, verbose_name='标签名称')
     color = models.CharField(max_length=50, verbose_name='标签颜色')
     guid = models.CharField(max_length=50, verbose_name='GUID')
 
     class Meta:
         verbose_name = '标签'
         db_table = 'tag'
+        unique_together = [['tag', 'guid']]
 
     def __str__(self):
         return self.tag
@@ -99,7 +100,6 @@ class Tag(models.Model):
 class ClientTags(models.Model):
     """
     标签模型
-
     """
     peer_id = models.CharField(max_length=255, verbose_name='设备ID')
     tags = models.CharField(max_length=255, verbose_name='标签名称')
@@ -108,9 +108,13 @@ class ClientTags(models.Model):
     class Meta:
         verbose_name = '标签'
         db_table = 'client_tags'
+        unique_together = [['peer_id', 'tags', 'guid']]
 
 
 class Token(models.Model):
+    """
+    令牌模型
+    """
     username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
     # username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
     uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
@@ -129,6 +133,9 @@ class Token(models.Model):
 
 
 class LoginClient(models.Model):
+    """
+    登录客户端模型
+    """
     username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
     client_id = models.CharField(max_length=255, verbose_name='客户端ID')
     uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
@@ -285,6 +292,7 @@ class SharePersonal(models.Model):
         verbose_name_plural = '分享地址簿记录'
         ordering = ['-created_at']
         db_table = 'share_personal'
+        unique_together = [['guid', 'to_share_id']]  # 限定一个地址簿只能分享给同一个人一次
 
 
 class Alias(models.Model):
@@ -292,8 +300,9 @@ class Alias(models.Model):
     别名模型
     """
     alias = models.CharField(max_length=50, verbose_name='别名')
-    peer_id = models.CharField(max_length=50, verbose_name='peer_id')
-    guid = models.CharField(max_length=50, verbose_name='guid')
+    peer_id = models.ForeignKey(SystemInfo, to_field='client_id', on_delete=models.CASCADE,
+                                related_name='alias_peer_id')
+    guid = models.ForeignKey(Personal, to_field='guid', on_delete=models.CASCADE, related_name='alias_guid')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
     class Meta:
@@ -301,3 +310,4 @@ class Alias(models.Model):
         verbose_name_plural = '别名'
         ordering = ['-created_at']
         db_table = 'alias'
+        unique_together = [['alias', 'peer_id', 'guid']]  # alias在guid中只能对一个设备进行设置
