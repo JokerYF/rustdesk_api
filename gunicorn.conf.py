@@ -117,6 +117,7 @@ def on_starting(server):
     )
     server.log.info(f'[gunicorn] Django debug model: {PublicConfig.DEBUG}')
     server.log.info(f'[gunicorn] Django DB type: {PublicConfig.DB_TYPE}')
+    server.log.info(f'[gunicorn] RustDesk API Version: {PublicConfig.APP_VERSION}')
 
 
 def when_ready(server):

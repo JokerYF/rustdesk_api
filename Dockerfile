@@ -1,8 +1,15 @@
 # 使用Python官方镜像作为基础镜像
 FROM docker.1ms.run/python:3.13-slim
 
+ARG APP_VERSION
+RUN if [ -n "$APP_VERSION" ]; then \
+    mkdir -p /app/version && \
+    printf '%s' "$APP_VERSION" > /app/version; \
+    fi
+
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
+ENV APP_VERSION=${APP_VERSION}
 
 # 复制项目代码
 COPY . /app
@@ -15,5 +22,6 @@ EXPOSE 21114
 VOLUME ["/app/logs", "/app/data"]
 
 RUN chmod +x start.sh
+
 
 CMD ["./start.sh"]
