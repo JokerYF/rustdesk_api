@@ -149,25 +149,6 @@ class UserService(BaseService):
     def get_list_by_status(self, status, page=1, page_size=10):
         return self.__get_list(status=status, page=page, page_size=page_size)
 
-    def get_guid(self, username):
-        user = self.get_user_by_name(username)
-        group_id = user.userprofile.group_id
-        collection_id = 1 if user.is_superuser else 0
-        return f"{group_id}-{user.id}-{collection_id}"
-
-    def parse_guid(self, guid):
-        guid_list = guid.split("-")
-        group_id = guid_list[0]
-        user_id = guid_list[1]
-        collection_id = guid_list[2]
-        group = GroupService().get_group_by_id(group_id)
-        user = self.get_user_by_id(user_id)
-        return (
-            group,
-            user,
-            bool(int(collection_id)),
-        )  # TODO 第三个值应该返回地址簿ID，这里需要改
-
     def set_user_permissions(self, username, *permissions):
         permissions = self.db.objects.filter(
             user_permissions__codename__in=[*permissions]
