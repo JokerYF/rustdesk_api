@@ -138,4 +138,4 @@ def post_fork(server, worker):
     :param worker: 当前 worker 实例
     :return: None
     """
-    worker.log.info("[gunicorn] worker spawned (pid=%s)", worker.pid)
+    worker.log.info(f"[gunicorn] worker spawned (pid={worker.pid})")
