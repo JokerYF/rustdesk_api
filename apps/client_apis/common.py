@@ -93,6 +93,6 @@ def debug_request_None(func):
     @wraps(func)
     def wrapper(request: HttpRequest, *args, **kwargs):
         # return func(request, *args, **kwargs)
-        return JsonResponse({'code': 1})
+        return HttpResponse(status=200)
 
     return wrapper

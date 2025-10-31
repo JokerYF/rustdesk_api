@@ -353,12 +353,13 @@ class HeartBeatService(BaseService):
 
         :param uuid: 设备UUID
         :param kwargs: 需要更新的字段，如 client_id、ver 等
-        :returns: (obj, created) 元组，created 为 True 表示新建
+        :returns:
         """
         kwargs["modified_at"] = get_local_time()
         kwargs["timestamp"] = get_local_time()
-        # 使用 uuid 作为查找条件，其他字段放入 defaults，避免唯一约束冲突
-        return self.db.objects.update_or_create(uuid=uuid, defaults=kwargs)
+
+        if not self.db.objects.filter(uuid=uuid).update(**kwargs):
+            self.db.objects.create(**kwargs)
 
     def is_alive(self, uuid, timeout=60):
         client = self.db.objects.filter(uuid=uuid).first()
