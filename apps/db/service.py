@@ -334,7 +334,9 @@ class SystemInfoService(BaseService):
         :param kwargs: 系统信息字段
         :return: (created, object)元组
         """
-        self.db.objects.update_or_create(uuid=uuid, defaults=kwargs)
+        if not self.db.objects.filter(uuid=uuid).update(**kwargs):
+            self.db.objects.create(**kwargs)
+
         logger.info(f"更新设备信息: {kwargs}")
 
     def get_list(self):
@@ -378,36 +380,36 @@ class LoginClientService(BaseService):
     db = LoginClient
 
     def update_login_status(self, username, uuid, client_id):
-        log = self.db.objects.update_or_create(
-            username=self.get_username(username),
-            uuid=self.get_peer_by_uuid(uuid),
-            client_id=client_id,
-            deflaults={
-                "login_status": True,
-                "username": self.get_username(username),
-                "uuid": self.get_peer_by_uuid(uuid),
-                "client_id": client_id,
-            },
-        )
+        if not self.db.objects.filter(username=username, uuid=uuid).update(
+                username=self.get_username(username),
+                uuid=self.get_peer_by_uuid(uuid),
+                client_id=client_id,
+                login_status=True,
+        ):
+            self.db.objects.create(
+                username=self.get_username(username),
+                uuid=self.get_peer_by_uuid(uuid),
+                client_id=client_id,
+                login_status=True,
+            )
 
         logger.info(f"更新登录状态: {username} - {uuid}")
-        return log
 
     def update_logout_status(self, username, uuid, client_id):
-        log = self.db.objects.update_or_create(
-            username=self.get_username(username),
-            uuid=self.get_peer_by_uuid(uuid),
-            client_id=client_id,
-            deflaults={
-                "login_status": False,
-                "username": self.get_username(username),
-                "uuid": self.get_peer_by_uuid(uuid),
-                "client_id": client_id,
-            },
-        )
+        if not self.db.objects.filter(username=username, uuid=uuid).update(
+                username=self.get_username(username),
+                uuid=self.get_peer_by_uuid(uuid),
+                client_id=client_id,
+                login_status=False,
+        ):
+            self.db.objects.create(
+                username=self.get_username(username),
+                uuid=self.get_peer_by_uuid(uuid),
+                client_id=client_id,
+                login_status=False,
+            )
 
         logger.info(f"更新登出状态: {username} - {uuid}")
-        return log
 
     def get_login_client_list(self, username):
         return self.db.objects.filter(username=self.get_username(username)).all()
@@ -554,7 +556,13 @@ class TagService:
         :param tags: 标签列表
         :returns: 更新或创建的记录
         """
-        self.db_client_tags.objects.update_or_create(peer_id=peer_id, guid=self.guid, defaults={"tags": str(tags)})
+        kwargs = {
+            "peer_id": peer_id,
+            "tags": str(tags),
+            "guid": self.guid,
+        }
+        if not self.db_client_tags.objects.update(**kwargs):
+            self.db_client_tags.objects.create(**kwargs)
 
     def get_tags_by_peer_id(self, peer_id) -> list[str]:
         """
@@ -850,7 +858,13 @@ class AliasService(BaseService):
     db = Alias
 
     def set_alias(self, peer_id, alias, guid):
-        return self.db.objects.update_or_create(peer_id=peer_id, guid=guid, defaults={"alias": alias})
+        kwargs = {
+            "peer_id": peer_id,
+            "guid": guid,
+            "alias": alias,
+        }
+        if not self.db.objects.filter(peer_id=peer_id, guid=guid).update(**kwargs):
+            self.db.objects.create(**kwargs)
 
     def get_alias(self, guid):
         return self.db.objects.filter(guid=guid).all()
