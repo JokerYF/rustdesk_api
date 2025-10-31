@@ -1,5 +1,5 @@
 services:
-  app:
+  rustdesk_api:
     container_name: rustdesk_api
     image: swr.cn-north-4.myhuaweicloud.com/yufeng-yf/rustdesk_api:latest
     restart: unless-stopped

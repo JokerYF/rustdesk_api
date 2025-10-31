@@ -1,5 +1,5 @@
 services:
-  app:
+  rustdesk_api:
     container_name: rustdesk_api
     image: rustdesk_api:${VERSION:-latest}
     # 若需本地调试或首次运行前未构建镜像，可临时改为：

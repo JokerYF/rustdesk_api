@@ -381,7 +381,6 @@ def audit_conn(request: HttpRequest):
         username = str(peer[-1]).lower()
         peer_id = peer[0]
 
-
     audit_service = AuditConnService()
     audit_service.log(
         conn_id=conn_id,

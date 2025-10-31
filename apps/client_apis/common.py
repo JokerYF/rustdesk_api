@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from functools import wraps
 
 from django.http import HttpRequest, JsonResponse, HttpResponse
@@ -60,8 +61,7 @@ def request_debug_log(func):
             'method': request.method,
             'path': request.path,
             'headers': dict(request.headers),
-            'client_ip': getattr(request, 'client_ip',
-                                 request.META.get('CLIENT_IP') or request.META.get('REMOTE_ADDR')),
+            'client_ip': getattr(request, 'client_ip', request.META.get('CLIENT_IP') or request.META.get('REMOTE_ADDR'))
         }
         token_service = TokenService(request=request)
         if post := token_service.request_body:
@@ -70,7 +70,11 @@ def request_debug_log(func):
             request_log['request_query'] = get
 
         logger.debug(f'[{__uuid}]request: {json.dumps(request_log)}')
-        response = func(request, *args, **kwargs)
+        try:
+            response = func(request, *args, **kwargs)
+        except Exception:
+            logger.error(f'[{__uuid}]error: {traceback.format_exc()}')
+            raise
         if response is None:
             response = HttpResponse(status=200)
         response_data = {
