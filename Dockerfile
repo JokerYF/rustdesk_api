@@ -1,5 +1,7 @@
-# 使用Python官方镜像作为基础镜像
 FROM docker.1ms.run/python:3.13-slim
+
+COPY . /app
+WORKDIR /app
 
 ARG APP_VERSION
 RUN if [ -n "$APP_VERSION" ]; then \
@@ -9,10 +11,6 @@ RUN if [ -n "$APP_VERSION" ]; then \
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_VERSION=${APP_VERSION}
-
-# 复制项目代码
-COPY . /app
-WORKDIR /app
 
 RUN pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
