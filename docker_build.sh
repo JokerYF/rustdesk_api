@@ -9,7 +9,7 @@ set -euo pipefail
 #
 # 说明:
 # - 自动生成时间版本号并构建镜像: rustdesk_api:<version>
-# - 将版本号写入项目根目录文件 `dev_version` 与 `.env` (写入 VERSION=...)
+# - 将版本号写入项目根目录 `.env` (写入 VERSION=...)
 # - 兼容 macOS、Linux、Windows(WSL2) 终端环境
 # =============================
 
@@ -37,20 +37,14 @@ save_version_files() {
   local repo_root
   repo_root="$(cd "$(dirname "$0")" && pwd)"
 
-  # dev_version: 仅保存版本号文本
-  echo -n "$version" >"${repo_root}/dev_version"
-
   # .env: 写入 VERSION=...（简单覆盖方式，若需保留其它变量可改为就地替换）
   echo "VERSION=${version}" >"${repo_root}/.env"
 
-  echo "已写入版本号到: ${repo_root}/dev_version 与 ${repo_root}/.env (VERSION=${version})"
+  echo "已写入版本号到: ${repo_root}/.env (VERSION=${version})"
 }
 
 ###
 # 构建并打标签镜像
-#
-# :param str version: 要构建并标记的镜像版本号（例如 v1.0.0 或 1.0.0）
-# :raises RuntimeError: 当构建失败时抛出
 ###
 build_image() {
   local version="$1"
@@ -67,7 +61,7 @@ build_image() {
 ###
 print_usage() {
   echo "用法: $0"
-  echo "功能: 自动生成时间版本号并构建镜像，同时更新 dev_version 与 .env"
+  echo "功能: 自动生成时间版本号并构建镜像，同时更新 .env (VERSION=...)"
 }
 
 ###

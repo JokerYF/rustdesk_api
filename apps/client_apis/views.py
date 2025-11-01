@@ -71,6 +71,7 @@ def sysinfo(request: HttpRequest):
     )
 
     # 如果当前设备登录过，则更新token
+    # 这里有个问题，这里更新没有校验token有效期，服务器停机好几个小时后启动，还是会刷新token，没想好这块逻辑，先这样
     TokenService(request=request).update_token_by_uuid(uuid)
 
     return HttpResponse(status=200)
