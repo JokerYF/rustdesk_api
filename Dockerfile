@@ -3,7 +3,6 @@ FROM docker.1ms.run/python:3.13-slim
 
 ARG APP_VERSION
 RUN if [ -n "$APP_VERSION" ]; then \
-    mkdir -p /app/version && \
     printf '%s' "$APP_VERSION" > /app/version; \
     fi
 
