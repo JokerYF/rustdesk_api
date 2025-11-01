@@ -316,7 +316,7 @@ class SystemInfoService(BaseService):
         :return: (created, object)元组
         """
         if not self.db.objects.filter(uuid=uuid).update(**kwargs):
-            self.db.objects.create(**kwargs)
+            self.db.objects.create(uuid=uuid, **kwargs)
 
         logger.info(f"更新设备信息: {kwargs}")
 
@@ -342,7 +342,7 @@ class HeartBeatService(BaseService):
         kwargs["timestamp"] = get_local_time()
 
         if not self.db.objects.filter(uuid=uuid).update(**kwargs):
-            self.db.objects.create(**kwargs)
+            self.db.objects.create(uuid=uuid, **kwargs)
 
     def is_alive(self, uuid, timeout=60):
         client = self.db.objects.filter(uuid=uuid).first()
