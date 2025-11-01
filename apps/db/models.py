@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User, Group, AbstractUser
 from django.db import models
 
-from apps.common.utils import get_uuid
+from common.utils import get_uuid
 
 
 # Create your models here.

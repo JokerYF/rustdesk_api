@@ -1,7 +1,7 @@
 import os
 
 from base import DATA_PATH
-from rustdesk_api.common.env import PublicConfig
+from common.env import PublicConfig
 
 sqlite3_config = {
     'ENGINE': 'django.db.backends.sqlite3',

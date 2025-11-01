@@ -45,3 +45,9 @@ def get_randem_md5():
     :return:
     """
     return str(get_md5(f'{uuid4()}_{time.ctime()}_{random.randint(0, 99999999)}'))
+
+
+def str2bool(value):
+    if isinstance(value, bool):
+        return value
+    return value.lower() in ('true', 't', '1')

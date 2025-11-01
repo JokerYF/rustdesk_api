@@ -1,5 +1,9 @@
+import logging
 import os
 
+from common.utils import str2bool
+
+logger = logging.getLogger(__name__)
 
 def get_env(key, default=None):
     return os.environ.get(key, default)
@@ -7,7 +11,7 @@ def get_env(key, default=None):
 
 class PublicConfig:
     DB_TYPE = get_env('DATABASE', 'sqlite3')
-    DEBUG = bool(get_env('DEBUG', False))
+    DEBUG = str2bool(get_env('DEBUG', False))
     APP_VERSION = get_env('APP_VERSION', '')
 
 

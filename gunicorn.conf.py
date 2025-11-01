@@ -1,7 +1,7 @@
 import os
 
 from base import LOG_PATH
-from rustdesk_api.common.env import GunicornConfig, PublicConfig
+from common.env import GunicornConfig, PublicConfig
 
 # 监听地址（可由 HOST、PORT 环境变量覆盖）
 bind = GunicornConfig.bind

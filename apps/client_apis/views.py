@@ -8,10 +8,10 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from apps.client_apis.common import check_login, request_debug_log, debug_request_None
-from apps.common.utils import get_local_time
 from apps.db.models import SystemInfo
 from apps.db.service import HeartBeatService, SystemInfoService, TokenService, UserService, \
     TagService, AuditConnService, PersonalService, AliasService, SharePersonalService
+from common.utils import get_local_time
 
 logger = logging.getLogger(__name__)
 

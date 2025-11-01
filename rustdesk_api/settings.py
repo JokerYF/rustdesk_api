@@ -16,8 +16,8 @@ from pathlib import Path
 from pathlib import Path
 
 from base import BASE_DIR, LOG_PATH
-from rustdesk_api.common.db_config import db_config
-from rustdesk_api.common.env import PublicConfig
+from common.db_config import db_config
+from common.env import PublicConfig
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'apps.client_apis.apps.ClientApisConfig',
     'apps.db.apps.DbConfig',
     'apps.commands.apps.CommandsConfig',
+    'apps.web.apps.WebConfig',
 ]
 
 MIDDLEWARE = [

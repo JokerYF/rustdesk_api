@@ -16,6 +16,28 @@ set -euo pipefail
 IMAGE_NAME="rustdesk_api"
 
 ###
+# 更新或新增 .env 变量
+#
+# :param str env_file: .env 文件路径
+# :param str key: 变量名
+# :param str value: 变量值
+# :returns: 无
+###
+upsert_env_var() {
+  local env_file="$1"
+  local key="$2"
+  local value="$3"
+
+  # 若存在同名 key，则原位替换；否则追加
+  if grep -q "^${key}=" "$env_file" 2>/dev/null; then
+    # 以 key= 开头的整行替换为 key=value（仅替换首个匹配）
+    awk -v k="$key" -v v="$value" 'BEGIN{OFS="="} $0 ~ ("^"k"=") {$0=k"="v} {print}' "$env_file" >"${env_file}.tmp" && mv "${env_file}.tmp" "$env_file"
+  else
+    printf "%s\n" "${key}=${value}" >>"$env_file"
+  fi
+}
+
+###
 # 生成时间版本号
 #
 # :returns str: 带前缀的时间版本号 (格式: dev_%Y%m%d%H%M%S)
@@ -31,14 +53,37 @@ generate_version() {
 # :returns: 无
 ###
 save_version_files() {
-  local version="$1"
+  local version="$1"; shift || true
   local repo_root
   repo_root="$(cd "$(dirname "$0")" && pwd)"
+  local env_file="${repo_root}/.env"
 
-  # .env: 写入 VERSION=...（简单覆盖方式，若需保留其它变量可改为就地替换）
-  echo "APP_VERSION=${version}" >"${repo_root}/.env"
+  # 确保 .env 存在（不清空，保留已有变量）
+  touch "$env_file"
 
-  echo "已写入版本号到: ${repo_root}/.env (APP_VERSION=${version})"
+  # 基础写入：APP_VERSION；DEBUG 默认 true（可被后续传参覆盖）
+  upsert_env_var "$env_file" "APP_VERSION" "$version"
+  upsert_env_var "$env_file" "DEBUG" "true"
+
+  # 处理额外传入的 KEY=VALUE 参数，覆盖或追加
+  local kv
+  for kv in "$@"; do
+    case "$kv" in
+      *=*)
+        local key="${kv%%=*}"
+        local val="${kv#*=}"
+        # 去除可能的首尾空白（兼容 BSD/macOS 与 GNU sed）
+        key="$(printf "%s" "$key" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+        val="$(printf "%s" "$val" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+        [ -n "$key" ] && upsert_env_var "$env_file" "$key" "$val"
+        ;;
+      *)
+        echo "警告: 忽略无效参数(需为 KEY=VALUE 形式): $kv" >&2
+        ;;
+    esac
+  done
+
+  echo "已更新: ${env_file} (APP_VERSION=${version})"
 }
 
 ###
@@ -61,8 +106,9 @@ build_image() {
 # :returns: 无
 ###
 print_usage() {
-  echo "用法: $0"
-  echo "功能: 自动生成时间版本号并构建镜像，同时更新 .env (APP_VERSION=...)"
+  echo "用法: $0 [KEY=VALUE ...]"
+  echo "功能: 自动生成时间版本号并构建镜像，同时更新 .env (APP_VERSION=..., DEBUG=...)"
+  echo "示例: $0 DEBUG=false API_BASE_URL=https://example.com"
 }
 
 ###
@@ -71,14 +117,28 @@ print_usage() {
 # :returns: 以状态码指示成功或失败
 ###
 main() {
-  if [ $# -gt 0 ]; then
-    echo "提示: 本脚本现已改为自动生成时间版本号, 忽略传入参数: $*"
-  fi
-
   local version
   version="$(generate_version)"
 
-  save_version_files "$version"
+  # 收集 KEY=VALUE 形式的附加参数
+  local extras=()
+  local arg
+  for arg in "$@"; do
+    case "$arg" in
+      -h|--help)
+        print_usage
+        return 0
+        ;;
+      *=*)
+        extras+=("$arg")
+        ;;
+      *)
+        echo "警告: 忽略无效参数(需为 KEY=VALUE 或 --help): $arg" >&2
+        ;;
+    esac
+  done
+
+  save_version_files "$version" "${extras[@]:-}"
   build_image "$version"
 }
 

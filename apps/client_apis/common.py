@@ -5,8 +5,8 @@ from functools import wraps
 
 from django.http import HttpRequest, JsonResponse, HttpResponse
 
-from apps.common.utils import get_randem_md5
 from apps.db.service import TokenService, SystemInfoService
+from common.utils import get_randem_md5
 
 logger = logging.getLogger('request_debug_log')
 

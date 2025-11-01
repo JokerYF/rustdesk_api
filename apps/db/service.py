@@ -9,7 +9,6 @@ from django.db import models
 from django.db import transaction
 from django.http import HttpRequest
 
-from apps.common.utils import get_local_time, get_randem_md5
 from apps.db.models import (
     HeartBeat,
     SystemInfo,
@@ -21,6 +20,7 @@ from apps.db.models import (
     UserPrefile,
     Personal, Alias, ClientTags, SharePersonal,
 )
+from common.utils import get_local_time, get_randem_md5
 
 logger = logging.getLogger(__name__)
 
@@ -708,73 +708,6 @@ class AuditConnService(BaseService):
                 username=self.get_username(username),
                 type=type_,
             )
-
-    def create_log(
-            self,
-            action,
-            conn_id,
-            initiating_ip,
-            session_id,
-            controlled_uuid,
-            controller_uuid=None,
-    ):
-        """
-        连接日志
-        :param action:
-        :param conn_id:
-        :param initiating_ip:
-        :param session_id:
-        :param controller_uuid:
-        :param controlled_uuid:
-        :return:
-        """
-        if controller_uuid:
-            controller_uuid = self.get_peer_by_uuid(controller_uuid)
-        controlled_uuid = self.get_peer_by_uuid(controlled_uuid)
-
-        data = {
-            "action": action,
-            "conn_id": conn_id,
-            "session_id": session_id,
-            "controller_uuid": controller_uuid,
-            "controlled_uuid": controlled_uuid,
-            "type": 0,
-        }
-        if initiating_ip:
-            data["initiating_ip"] = initiating_ip
-
-        log = self.db.objects.create(**data)
-        return log
-
-    def update_log(
-            self,
-            conn_id,
-            initiating_ip,
-            session_id,
-            controller_uuid,
-            controlled_uuid,
-            username="",
-            _type=0,
-    ):
-        controller_uuid = self.get_peer_by_uuid(controller_uuid)
-        controlled_uuid = self.get_peer_by_uuid(controlled_uuid)
-
-        data = {
-            "initiating_ip": initiating_ip,
-            "session_id": session_id,
-            "controller_uuid": controller_uuid,
-            "controlled_uuid": controlled_uuid,
-            "type": _type,
-        }
-        if username:
-            data["username"] = self.get_username(username)
-
-        return self.update(
-            filters={
-                "conn_id": conn_id,
-            },
-            **data,
-        )
 
 
 class PersonalService(BaseService):
