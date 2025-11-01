@@ -11,6 +11,4 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
-    # 如果需要加载宿主机环境文件到容器，可取消下行注释（非必须）
-    # - ./.env:/app/.env:ro
 

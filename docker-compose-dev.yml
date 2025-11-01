@@ -1,18 +1,14 @@
 services:
   rustdesk_api:
     container_name: rustdesk_api_dev
-    build: .
     image: rustdesk_api:${APP_VERSION}
     restart: unless-stopped
     ports:
       - "21114:21114"
     environment:
       - DATABASE=sqlite3
-      - DEBUG=true
       - TZ=Asia/Shanghai
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
-    # 如果需要加载宿主机环境文件到容器，可取消下行注释（非必须）
-    # - ./.env:/app/.env:ro
 
