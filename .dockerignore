@@ -23,9 +23,13 @@ db.sqlite3
 .DS_Store
 Thumbs.db
 
+# Build
+.dockerignore
+Dockerfile
 docker_build.sh
 docker-compose.yml
 docker-compose-dev.yml
+
+# Docs
 notes
-Dockerfile
 *.md
