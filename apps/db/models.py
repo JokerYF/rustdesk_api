@@ -117,7 +117,8 @@ class Token(models.Model):
     """
     username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
     # username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
-    uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
+    # uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
+    uuid = models.CharField(max_length=255, verbose_name='设备UUID', null=True)
     token = models.CharField(max_length=255, verbose_name='令牌')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     last_used_at = models.DateTimeField(auto_now=True, verbose_name='最后使用时间')
@@ -138,7 +139,15 @@ class LoginClient(models.Model):
     """
     username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
     client_id = models.CharField(max_length=255, verbose_name='客户端ID')
-    uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
+    # uuid = models.ForeignKey(SystemInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
+    uuid = models.CharField(max_length=255, verbose_name='设备UUID')
+    client_type = models.CharField(max_length=255, verbose_name='客户端类型',
+                                   choices=[(1, 'web'), (2, 'client')], default=2)
+    platform = models.CharField(max_length=255, verbose_name='平台',
+                                choices=[(1, 'Windows'), (2, 'MacOS'), (3, 'Linux'), (4, 'Android'), (5, 'iOS'),
+                                         (6, 'Web')],
+                                null=True)
+    client_name = models.CharField(max_length=255, verbose_name='客户端名称')
     login_status = models.BooleanField(default=True, verbose_name='登录状态')
 
     class Meta:

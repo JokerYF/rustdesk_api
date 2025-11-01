@@ -360,34 +360,66 @@ class LoginClientService(BaseService):
 
     db = LoginClient
 
-    def update_login_status(self, username, uuid, client_id):
+    @property
+    def platform(self):
+        return {
+            'windows': 1,
+            'mac': 2,
+            'linux': 3,
+            'android': 4,
+            'ios': 5,
+            'web': 6,
+        }
+
+    @staticmethod
+    def client_type(client_type: str):
+        _type = 1 if client_type.lower() == 'web' else 2
+        return _type
+
+    def update_login_status(self, username, uuid, platform, client_type, client_name, client_id=None):
+        logger.info(
+            f"更新登录状态: {username} - {uuid} {username, uuid, platform, client_type, client_name, client_id}")
         if not self.db.objects.filter(username=username, uuid=uuid).update(
                 username=self.get_username(username),
-                uuid=self.get_peer_by_uuid(uuid),
+                uuid=uuid,
                 client_id=client_id,
                 login_status=True,
+                client_type=self.client_type(client_type),
+                platform=self.platform[platform],
+                client_name=client_name,
         ):
             self.db.objects.create(
                 username=self.get_username(username),
-                uuid=self.get_peer_by_uuid(uuid),
+                uuid=uuid,
                 client_id=client_id,
                 login_status=True,
+                client_type=client_type,
+                platform=platform,
+                client_name=client_name,
             )
 
         logger.info(f"更新登录状态: {username} - {uuid}")
 
-    def update_logout_status(self, username, uuid, client_id):
+    def update_logout_status(self, username, uuid, client_id=None):
         if not self.db.objects.filter(username=username, uuid=uuid).update(
                 username=self.get_username(username),
-                uuid=self.get_peer_by_uuid(uuid),
+                uuid=uuid,
                 client_id=client_id,
                 login_status=False,
         ):
+            login_sq = self.db.objects.filter(
+                username=self.get_username(username),
+                uuid=uuid,
+                login_status=True
+            ).first()
             self.db.objects.create(
                 username=self.get_username(username),
-                uuid=self.get_peer_by_uuid(uuid),
+                uuid=uuid,
                 client_id=client_id,
                 login_status=False,
+                client_type=login_sq.client_type,
+                platform=login_sq.platform,
+                client_name=login_sq.client_name,
             )
 
         logger.info(f"更新登出状态: {username} - {uuid}")
@@ -489,7 +521,7 @@ class TokenService(BaseService):
 
     def get_cur_uuid_by_token(self, token) -> str | None:
         if uuid := self.db.objects.filter(token=token).first().uuid:
-            return uuid.uuid
+            return uuid
         return None
 
 

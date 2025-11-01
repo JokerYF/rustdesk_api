@@ -10,7 +10,7 @@ from django.views.decorators.http import require_http_methods
 from apps.client_apis.common import check_login, request_debug_log, debug_request_None
 from apps.db.models import SystemInfo
 from apps.db.service import HeartBeatService, SystemInfoService, TokenService, UserService, \
-    TagService, AuditConnService, PersonalService, AliasService, SharePersonalService
+    TagService, AuditConnService, PersonalService, AliasService, SharePersonalService, LoginClientService
 from common.utils import get_local_time
 
 logger = logging.getLogger(__name__)
@@ -91,6 +91,10 @@ def login(request: HttpRequest):
     username = body.get('username')
     password = body.get('password')
     uuid = body.get('uuid')
+    device_info = body.get('deviceInfo', {})
+    platform = device_info.get('os')  # 设备端别
+    client_type = device_info.get('type')
+    client_name = device_info.get('name')
 
     try:
         user = User.objects.get(username=username)
@@ -102,11 +106,14 @@ def login(request: HttpRequest):
     token = token_service.create_token(username, uuid)
 
     # Server端记录登录信息
-    # LoginClientService().update_login_status(
-    #     uuid=SystemInfoService().get_client_info_by_uuid(uuid),
-    #     username=user,
-    #     client_id=body.get('id'),
-    # )
+    LoginClientService().update_login_status(
+        uuid=uuid,
+        username=user,
+        client_id=body.get('id'),
+        client_name=client_name,
+        platform=platform,
+        client_type=client_type,
+    )
     #
     # LogService().create_log(
     #     username=username,
@@ -140,11 +147,11 @@ def logout(request: HttpRequest):
     token_service.delete_token(token)
 
     # 更新登出状态
-    # LoginClientService().update_logout_status(
-    #     uuid=uuid,
-    #     username=user_info,
-    #     client_id=body.get('id'),
-    # )
+    LoginClientService().update_logout_status(
+        uuid=uuid,
+        username=user_info,
+        client_id=body.get('id'),
+    )
     #
     # LogService().create_log(
     #     username=user_info,
