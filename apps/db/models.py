@@ -147,7 +147,7 @@ class LoginClient(models.Model):
                                 choices=[(1, 'Windows'), (2, 'MacOS'), (3, 'Linux'), (4, 'Android'), (5, 'iOS'),
                                          (6, 'Web')],
                                 null=True)
-    client_name = models.CharField(max_length=255, verbose_name='客户端名称')
+    client_name = models.CharField(max_length=255, verbose_name='客户端名称', default='', blank=True)
     login_status = models.BooleanField(default=True, verbose_name='登录状态')
 
     class Meta:
