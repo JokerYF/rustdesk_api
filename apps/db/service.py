@@ -320,7 +320,7 @@ class SystemInfoService(BaseService):
         client_id = kwargs.get("client_id")
 
         if not self.db.objects.filter(Q(uuid=uuid) | Q(client_id=client_id)).update(**kwargs):
-            self.db.objects.create(uuid=uuid, **kwargs)
+            self.db.objects.create(**kwargs)
 
         logger.info(f"更新设备信息: {kwargs}")
 
