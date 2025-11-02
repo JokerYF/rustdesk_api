@@ -526,8 +526,8 @@ class TokenService(BaseService):
         return {}
 
     def get_cur_uuid_by_token(self, token) -> str | None:
-        if uuid := self.db.objects.filter(token=token).first().uuid:
-            return uuid
+        if peer := self.db.objects.filter(token=token).first():
+            return peer.uuid
         return None
 
 
