@@ -110,7 +110,7 @@ class ClientTags(models.Model):
     class Meta:
         verbose_name = '标签'
         db_table = 'client_tags'
-        unique_together = [['peer_id', 'tags', 'guid']]
+        unique_together = [['peer_id', 'guid']]
 
 
 class Token(models.Model):

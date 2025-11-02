@@ -549,7 +549,32 @@ class TagService:
         self.db_tag.objects.create(tag=tag, color=color, guid=self.guid)
 
     def delete_tag(self, *tag):
-        self.db_tag.objects.filter(tag__in=tag, guid=self.guid).delete()
+        """
+        删除指定标签，并在关系表中移除这些标签（单次批量更新）。
+
+        :param str tag: 一个或多个需要删除的标签名
+        """
+        tags_to_delete = {str(t) for t in tag if t is not None}
+        if not tags_to_delete:
+            return
+
+        # 删除标签本身
+        self.db_tag.objects.filter(tag__in=tags_to_delete, guid=self.guid).delete()
+
+        # 遍历一次构造需要更新的实例，最后单次 bulk_update
+        changed_instances = []
+        for inst in self.db_client_tags.objects.filter(guid=self.guid).all():
+            current_tags = self._parse_tags(inst.tags)
+            if not current_tags:
+                continue
+            new_tags = [t for t in current_tags if t not in tags_to_delete]
+            if new_tags != current_tags:
+                # 统一以 JSON 格式写回
+                inst.tags = json.dumps(new_tags)
+                changed_instances.append(inst)
+
+        if changed_instances:
+            self.db_client_tags.objects.bulk_update(changed_instances, ["tags"])
 
     def update_tag(self, tag, color=None, new_tag=None):
         data = {}
@@ -567,6 +592,14 @@ class TagService:
         """
         return self.db_tag.objects.filter(guid=self.guid).all()
 
+    @staticmethod
+    def __get_tags(list_a: list, list_b: list):
+        set_a = set(list_a)
+        set_b = set(list_b)
+        if set_a & set_b == set_b:
+            return list(set_b)
+        return list_a + list_b
+
     def set_tag_by_peer_id(self, peer_id, tags):
         """
         为指定设备设置标签（覆盖式）。
@@ -575,13 +608,16 @@ class TagService:
         :param tags: 标签列表
         :returns: 更新或创建的记录
         """
+        if qs := self.db_client_tags.objects.filter(peer_id=peer_id, guid=self.guid).first():
+            qs.tags = str(tags if tags else [])
+            return qs.save()
+
         kwargs = {
             "peer_id": peer_id,
             "tags": str(tags),
             "guid": self.guid,
         }
-        if not self.db_client_tags.objects.update(**kwargs):
-            self.db_client_tags.objects.create(**kwargs)
+        return self.db_client_tags.objects.create(**kwargs)
 
     def get_tags_by_peer_id(self, peer_id) -> list[str]:
         """
@@ -810,12 +846,23 @@ class AliasService(BaseService):
     db = Alias
 
     def set_alias(self, peer_id, alias, guid):
+        """
+        设置或更新某地址簿下设备的别名。
+
+        :param str peer_id: 设备的 `client_id`
+        :param str alias: 要设置的别名
+        :param str guid: 地址簿 GUID
+        :returns: None
+        """
+        # 注意：模型字段 `peer_id` 与 `guid` 均为 ForeignKey；
+        # 若直接赋字符串会被认为是传入关联对象，需使用 `<field>_id` 列名进行原值写入
         kwargs = {
-            "peer_id": peer_id,
-            "guid": guid,
+            "peer_id_id": peer_id,
+            "guid_id": guid,
             "alias": alias,
         }
-        if not self.db.objects.filter(peer_id=peer_id, guid=guid).update(**kwargs):
+        updated = self.db.objects.filter(peer_id_id=peer_id, guid_id=guid).update(**kwargs)
+        if not updated:
             self.db.objects.create(**kwargs)
 
     def get_alias(self, guid):
