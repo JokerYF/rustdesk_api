@@ -14,9 +14,25 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import logging
+
 from django.urls import path, include
+
+from common.env import PublicConfig
+from rustdesk_api.settings import INTERNAL_IPS
+
+logger = logging.getLogger(__name__)
 
 urlpatterns = [
     path('', include('apps.web.urls')),
     path('api/', include('apps.client_apis.urls')),
 ]
+
+if PublicConfig.DEBUG:
+    import debug_toolbar
+
+    urlpatterns = [
+                      path('__debug__/', include(debug_toolbar.urls)),
+                  ] + urlpatterns
+    logger.info("[django] debug toolbar enabled.")
+    logger.info(f"[django] debug toolbar internal IPs: {INTERNAL_IPS}.")

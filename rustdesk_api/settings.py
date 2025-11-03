@@ -31,6 +31,13 @@ DEBUG = PublicConfig.DEBUG
 
 ALLOWED_HOSTS = ['*']
 
+# debug-toolbar host
+INTERNAL_IPS = ['localhost', '127.0.0.1'] if DEBUG else []
+DEBUG_TOOLBAR_CONFIG = {
+    'SQL_WARNING_THRESHOLD': 50,  # 超过50ms标红
+    # 'RENDER_PANELS': True,        # 完整显示长查询
+}
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -40,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'debug_toolbar',
     'apps.client_apis.apps.ClientApisConfig',
     'apps.db.apps.DbConfig',
     'apps.commands.apps.CommandsConfig',
@@ -47,6 +55,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
