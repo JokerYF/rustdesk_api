@@ -9,7 +9,7 @@ from common.logging_config import build_gunicorn_logging
 # 监听地址（可由 HOST、PORT 环境变量覆盖）
 bind = GunicornConfig.bind
 
-# 进程数（默认：CPU*2+1），线程数（默认：4）
+# 进程数，线程数
 workers = GunicornConfig.workers
 threads = GunicornConfig.threads
 
