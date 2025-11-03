@@ -555,8 +555,6 @@ def ab_peers(request):
 
     token_service = TokenService(request=request)
     request_query = token_service.request_query
-    page = int(request_query.get('current', 1))
-    page_size = int(request_query.get('pageSize', 10))
     guid = request_query.get('ab')
 
     personal_service = PersonalService()
@@ -576,7 +574,6 @@ def ab_peers(request):
     peer_ids = [p.peer.peer_id for p in peers_qs]
     alias_map = AliasService().get_alias_map(guid=guid, peer_ids=peer_ids)
     tags_map = TagService(guid=guid).get_tags_map(peer_ids)
-    print(tags_map)
 
     os_map = {
         'windows': 'Windows',
