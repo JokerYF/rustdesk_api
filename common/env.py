@@ -22,7 +22,7 @@ class DBConfig:
     MYSQL_DATABASE = get_env('MYSQL_DATABASE', 'rustdesk_api')
     MYSQL_HOST = get_env('MYSQL_HOST', '127.0.0.1')
     MYSQL_PORT = get_env('MYSQL_PORT', '3306')
-    MYSQL_USER = get_env('MYSQL_USER', 'rustdesk_api')
+    MYSQL_USER = get_env('MYSQL_USER', 'root')
     MYSQL_PASSWORD = get_env('MYSQL_PASSWORD', '')
 
 
