@@ -39,7 +39,7 @@ class BaseService:
     db: models.Model = None
 
     @staticmethod
-    def get_username(username):
+    def get_user_info(username):
         if isinstance(username, str):
             username = UserService().get_user_by_name(username)
         return username
@@ -392,7 +392,7 @@ class LoginClientService(BaseService):
 
     def update_login_status(self, username, uuid, platform, client_type, client_name, peer_id=None):
         if not self.db.objects.filter(username=username, uuid=uuid).update(
-                username=self.get_username(username),
+                username=self.get_user_info(username),
                 uuid=uuid,
                 peer_id=peer_id,
                 login_status=True,
@@ -401,7 +401,7 @@ class LoginClientService(BaseService):
                 client_name=client_name,
         ):
             self.db.objects.create(
-                username=self.get_username(username),
+                username=self.get_user_info(username),
                 uuid=uuid,
                 peer_id=peer_id,
                 login_status=True,
@@ -414,18 +414,18 @@ class LoginClientService(BaseService):
 
     def update_logout_status(self, username, uuid, peer_id=None):
         if not self.db.objects.filter(username=username, uuid=uuid).update(
-                username=self.get_username(username),
+                username=self.get_user_info(username),
                 uuid=uuid,
                 peer_id=peer_id,
                 login_status=False,
         ):
             login_sq = self.db.objects.filter(
-                username=self.get_username(username),
+                username=self.get_user_info(username),
                 uuid=uuid,
                 login_status=True
             ).first()
             self.db.objects.create(
-                username=self.get_username(username),
+                username=self.get_user_info(username),
                 uuid=uuid,
                 peer_id=peer_id,
                 login_status=False,
@@ -437,7 +437,7 @@ class LoginClientService(BaseService):
         logger.info(f"更新登出状态: {username} - {uuid}")
 
     def get_login_client_list(self, username):
-        return self.db.objects.filter(username=self.get_username(username)).all()
+        return self.db.objects.filter(username=self.get_user_info(username)).all()
 
 
 class TokenService(BaseService):
@@ -453,10 +453,10 @@ class TokenService(BaseService):
         self.request = request
 
     def create_token(self, username, uuid):
-        username = self.get_username(username)
+        username = self.get_user_info(username)
         token = f"{get_randem_md5()}_{username}"
         self.db.objects.create(
-            username=self.get_username(username),
+            username=self.get_user_info(username),
             uuid=uuid,
             token=token,
             created_at=get_local_time(),
@@ -548,14 +548,17 @@ class TagService:
     db_client = PeerInfo
     db_client_tags = ClientTags
 
-    def __init__(self, guid):
+    def __init__(self, guid, user: User | str):
         self.guid = guid
+        self.user = UserService().get_user_info(user)
 
-    def get_tags_by_name(self, *tag_name):
-        return self.db_tag.objects.filter(tag__in=tag_name, guid=self.guid).all()
+    def get_user_tags_by_name(self, *tag_name):
+        # return self.db_tag.objects.filter(tag__in=tag_name, guid=self.guid).all()
+        return self.user.user_tags.filter(tag__in=tag_name, guid=self.guid).all()
 
-    def get_tags_by_id(self, *tag_id):
-        return self.db_tag.objects.filter(id__in=tag_id, guid=self.guid).all()
+    def get_user_tags_by_id(self, *tag_id):
+        # return self.db_tag.objects.filter(id__in=tag_id, guid=self.guid).all()
+        return self.user.user_tags.filter(id__in=tag_id, guid=self.guid).all()
 
     def create_tag(self, tag, color):
         res = self.db_tag.objects.create(tag=tag, color=color, guid=self.guid)
@@ -572,9 +575,6 @@ class TagService:
         if not tags_to_delete:
             return
 
-        # 删除标签本身
-        self.db_tag.objects.filter(tag__in=tags_to_delete, guid=self.guid).delete()
-
         # 遍历一次构造需要更新的实例，最后单次 bulk_update
         changed_instances = []
         for inst in self.db_client_tags.objects.filter(guid=self.guid).all():
@@ -589,7 +589,10 @@ class TagService:
 
         if changed_instances:
             self.db_client_tags.objects.bulk_update(changed_instances, ["tags"])
-            logger.info(f"删除标签: {self.guid} - {tags_to_delete}")
+
+        # 删除标签本身
+        self.db_tag.objects.filter(tag__in=tags_to_delete, guid=self.guid).delete()
+        logger.info(f"删除标签: {self.guid} - {tags_to_delete}")
 
     def update_tag(self, tag, color=None, new_tag=None):
         data = {}
@@ -617,7 +620,7 @@ class TagService:
             return list(set_b)
         return list_a + list_b
 
-    def set_tag_by_peer_id(self, peer_id, tags):
+    def set_user_tag_by_peer_id(self, peer_id, tags):
         """
         为指定设备设置标签（覆盖式）。
 
@@ -626,10 +629,11 @@ class TagService:
         :returns: 更新或创建的记录
         """
         tag_list = []
-        for tag in self.get_tags_by_name(*list(tags)):
+        for tag in self.get_user_tags_by_name(*list(tags)):
             tag_list.append(tag.id)
 
-        if qs := self.db_client_tags.objects.filter(peer_id=peer_id, guid=self.guid).first():
+        # if qs := self.db_client_tags.objects.filter(peer_id=peer_id, guid=self.guid).first():
+        if qs := self.user.user_tags.filter(peer_id=peer_id, guid=self.guid).first():
             qs.tags = str(tag_list if tag_list else '[]')
             return qs.save()
 
@@ -638,12 +642,12 @@ class TagService:
             "tags": str(tag_list),
             "guid": self.guid,
         }
-        res = self.db_client_tags.objects.create(**kwargs)
+        res = self.user.user_tags.objects.create(**kwargs)
         logger.info(f"设置标签: {self.guid} - {peer_id} - {tag_list if tag_list else []}")
         return res
 
     def del_tag_by_peer_id(self, *peer_id):
-        res = self.db_client_tags.objects.filter(peer_id__in=peer_id, guid=self.guid).delete()
+        res = self.user.user_tags.objects.filter(peer_id__in=peer_id, guid=self.guid).delete()
         logger.info(f"删除标签: {self.guid} - {peer_id}")
         return res
 
@@ -654,7 +658,7 @@ class TagService:
         :param peer_id: 设备 peer_id
         :returns: 标签字符串列表，若无记录返回空列表
         """
-        row = self.db_client_tags.objects.filter(peer_id=peer_id, guid=self.guid).values("tags").first()
+        row = self.user.user_tags.objects.filter(peer_id=peer_id, guid=self.guid).values("tags").first()
         if not row:
             return []
         return self._parse_tags(row.get("tags"))
@@ -672,8 +676,10 @@ class TagService:
         result: dict[str, list[str]] = {}
         for row in rows:
             tags = eval(row.get("tags") or '[]')
-            tags_qs = self.get_tags_by_id(*tags)
-            result[row["peer_id"]] = [str(tag.tag) for tag in tags_qs]
+            tags_qs = self.get_user_tags_by_id(*tags)
+            if not tags_qs:
+                continue
+            result[row["peer_id"]] = [str(tag) for tag in tags_qs.first().tags]
         return result
 
     @staticmethod
@@ -731,7 +737,7 @@ class LogService(BaseService):
         :return: 新创建的日志实例
         """
         log = self.db.objects.create(
-            username=self.get_username(username),
+            username=self.get_user_info(username),
             uuid=self.get_peer_by_uuid(uuid),
             log_level=log_level,
             operation_type=log_type,  # 根据实际需求映射到合适的操作类型
@@ -809,7 +815,7 @@ class AuditConnService(BaseService):
             self.db.objects.filter(conn_id=conn_id).update(
                 session_id=session_id,
                 controller_uuid=self.get_peer_by_peer_id(controller_peer_id),
-                username=self.get_username(username),
+                username=self.get_user_info(username),
                 type=type_,
             )
         logger.info(
@@ -821,7 +827,7 @@ class PersonalService(BaseService):
     db = Personal
 
     def create_personal(self, personal_name, create_user, personal_type="public"):
-        create_user = self.get_username(create_user)
+        create_user = self.get_user_info(create_user)
         personal = self.db.objects.create(
             personal_name=personal_name,
             create_user=create_user,
@@ -832,7 +838,7 @@ class PersonalService(BaseService):
         return personal
 
     def create_self_personal(self, username):
-        username = self.get_username(username)
+        username = self.get_user_info(username)
         personal = self.create_personal(personal_name=username, create_user=username, personal_type="private")
         logger.info(f'创建个人地址簿: user={username}')
         return personal
@@ -852,13 +858,13 @@ class PersonalService(BaseService):
         return None
 
     def add_personal_to_user(self, guid, username):
-        user = self.get_username(username)
+        user = self.get_user_info(username)
         res = self.get_personal(guid=guid).personal_user.create(username=user)
         logger.info(f'分享地址簿给用户: {guid} - {username}')
         return res
 
     def del_personal_to_user(self, guid, username):
-        username = self.get_username(username)
+        username = self.get_user_info(username)
         res = (
             self.get_personal(guid=guid)
             .personal_user.filter(username=username)
@@ -937,7 +943,7 @@ class SharePersonalService(BaseService):
         self.user = count_user
 
     def share_to_user(self, guid, username):
-        user = PersonalService().get_username(username)
+        user = PersonalService().get_user_info(username)
         return self.db.objects.create(
             guid=guid,
             to_share_id=user.id,

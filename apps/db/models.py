@@ -103,6 +103,8 @@ class ClientTags(models.Model):
     """
     标签模型
     """
+    user = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名',
+                             related_name='user_tags')
     peer_id = models.CharField(max_length=255, verbose_name='设备ID')
     tags = models.CharField(max_length=255, verbose_name='标签名称')
     guid = models.CharField(max_length=50, verbose_name='GUID')

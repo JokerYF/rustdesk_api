@@ -162,45 +162,45 @@ def logout(request: HttpRequest):
     return JsonResponse({'code': 1})
 
 
-@require_http_methods(["GET", "POST"])
-@request_debug_log
-@check_login
-def ab(request: HttpRequest):
-    """
-    获取地址簿
-    :param request:
-    :return:
-    """
-    if request.method == 'GET':
-        # return JsonResponse({'error': 'None'})
-        return JsonResponse(
-            {
-                "data": json.dumps(
-                    {
-                        'peers': [],
-                        'tags': [],
-                        'tag_colors': {},
-                    }
-                )
-            }
-        )
-    elif request.method == 'POST':
-        token_service = TokenService(request=request)
-        user_info = token_service.user_info
-        body = token_service.request_body
-        data = json.loads(body.get('data')) if body.get('data') else {}
-
-        tag_service = TagService(user_info)
-        try:
-            if tags := data.get('tags', []):
-                for tag in tags:
-                    color = json.loads(data['tag_colors'])[tag]
-                    tag_service.create_tag(tag, color)
-        except Exception as e:
-            logger.error(traceback.format_exc())
-            return JsonResponse({'error': f'创建标签失败: {e}'})
-
-    return JsonResponse({'code': 1})
+# @require_http_methods(["GET", "POST"])
+# @request_debug_log
+# @check_login
+# def ab(request: HttpRequest):
+#     """
+#     获取地址簿
+#     :param request:
+#     :return:
+#     """
+#     if request.method == 'GET':
+#         # return JsonResponse({'error': 'None'})
+#         return JsonResponse(
+#             {
+#                 "data": json.dumps(
+#                     {
+#                         'peers': [],
+#                         'tags': [],
+#                         'tag_colors': {},
+#                     }
+#                 )
+#             }
+#         )
+#     elif request.method == 'POST':
+#         token_service = TokenService(request=request)
+#         user_info = token_service.user_info
+#         body = token_service.request_body
+#         data = json.loads(body.get('data')) if body.get('data') else {}
+#
+#         tag_service = TagService(user_info)
+#         try:
+#             if tags := data.get('tags', []):
+#                 for tag in tags:
+#                     color = json.loads(data['tag_colors'])[tag]
+#                     tag_service.create_tag(tag, color)
+#         except Exception as e:
+#             logger.error(traceback.format_exc())
+#             return JsonResponse({'error': f'创建标签失败: {e}'})
+#
+#     return JsonResponse({'code': 1})
 
 
 @require_http_methods(["POST"])
@@ -416,7 +416,9 @@ def audit_file(request):
 @request_debug_log
 @check_login
 def ab_tags(request, guid):
-    tag_service = TagService(guid=guid)
+    token_service = TokenService(request=request)
+    user_info = token_service.user_info
+    tag_service = TagService(guid=guid, user=user_info)
     tags = tag_service.get_all_tags()
     data = [
         {
@@ -434,7 +436,8 @@ def ab_tag(request, guid):
     token_service = TokenService(request=request)
     body = token_service.request_body
     tags = body
-    tag_service = TagService(guid=guid)
+    user_info = token_service.user_info
+    tag_service = TagService(guid=guid, user=user_info)
     tag_service.delete_tag(*list(tags))
 
     return HttpResponse(status=200)
@@ -445,14 +448,15 @@ def ab_tag(request, guid):
 @check_login
 def ab_tag_add(request, guid):
     token_service = TokenService(request=request)
+    user_info = token_service.user_info
     body = token_service.request_body
     tag = body.get('name')
     color = body.get('color')
     if request.method == "POST":
-        tag_service = TagService(guid=guid)
+        tag_service = TagService(guid=guid, user=user_info)
         tag_service.create_tag(tag=tag, color=color)
     elif request.method == "PUT":
-        tag_service = TagService(guid=guid)
+        tag_service = TagService(guid=guid, user=user_info)
         tag_service.update_tag(tag=tag, color=color)
     return HttpResponse(status=200)
 
@@ -463,11 +467,12 @@ def ab_tag_add(request, guid):
 def ab_tag_rename(request, guid):
     token_service = TokenService(request=request)
     body = token_service.request_body
+    user_info = token_service.user_info
 
     tag_old = body.get('old')
     tag_new = body.get('new')
 
-    tag_service = TagService(guid=guid)
+    tag_service = TagService(guid=guid, user=user_info)
     tag_service.update_tag(tag=tag_old, new_tag=tag_new)
     return HttpResponse(status=200)
 
@@ -551,6 +556,7 @@ def ab_peers(request):
     # }
 
     token_service = TokenService(request=request)
+    user_info = token_service.user_info
     request_query = token_service.request_query
     guid = request_query.get('ab')
 
@@ -570,7 +576,7 @@ def ab_peers(request):
     # 预取 alias 和 tags，使用批量映射减少查询
     peer_ids = [p.peer.peer_id for p in peers_qs]
     alias_map = AliasService().get_alias_map(guid=guid, peer_ids=peer_ids)
-    tags_map = TagService(guid=guid).get_tags_map(peer_ids)
+    tags_map = TagService(guid=guid, user=user_info).get_tags_map(peer_ids)
 
     os_map = {
         'windows': 'Windows',
@@ -633,6 +639,7 @@ def ab_peer_add(request, guid):
 @check_login
 def ab_peer_update(request, guid):
     token_service = TokenService(request=request)
+    user_info = token_service.user_info
     body = token_service.request_body
     peer_id = body.get('id')
 
@@ -643,10 +650,7 @@ def ab_peer_update(request, guid):
             alias=body.get('alias', '')
         )
     if 'tags' in body.keys():
-        TagService(guid=guid).set_tag_by_peer_id(
-            peer_id=peer_id,
-            tags=body.get('tags', ''),
-        )
+        TagService(guid=guid, user=user_info).set_user_tag_by_peer_id(peer_id=peer_id, tags=body.get('tags', ''))
     return HttpResponse(status=200)
 
 
