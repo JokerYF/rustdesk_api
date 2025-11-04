@@ -162,45 +162,17 @@ def logout(request: HttpRequest):
     return JsonResponse({'code': 1})
 
 
-# @require_http_methods(["GET", "POST"])
-# @request_debug_log
+@require_http_methods(["GET", "POST"])
+@request_debug_log
+@debug_request_None  # 返回None，未登录无法获取设备信息
 # @check_login
-# def ab(request: HttpRequest):
-#     """
-#     获取地址簿
-#     :param request:
-#     :return:
-#     """
-#     if request.method == 'GET':
-#         # return JsonResponse({'error': 'None'})
-#         return JsonResponse(
-#             {
-#                 "data": json.dumps(
-#                     {
-#                         'peers': [],
-#                         'tags': [],
-#                         'tag_colors': {},
-#                     }
-#                 )
-#             }
-#         )
-#     elif request.method == 'POST':
-#         token_service = TokenService(request=request)
-#         user_info = token_service.user_info
-#         body = token_service.request_body
-#         data = json.loads(body.get('data')) if body.get('data') else {}
-#
-#         tag_service = TagService(user_info)
-#         try:
-#             if tags := data.get('tags', []):
-#                 for tag in tags:
-#                     color = json.loads(data['tag_colors'])[tag]
-#                     tag_service.create_tag(tag, color)
-#         except Exception as e:
-#             logger.error(traceback.format_exc())
-#             return JsonResponse({'error': f'创建标签失败: {e}'})
-#
-#     return JsonResponse({'code': 1})
+def ab(request: HttpRequest):
+    """
+    获取地址簿（未登录时请求）
+    :param request:
+    :return:
+    """
+    return JsonResponse({'code': 1})
 
 
 @require_http_methods(["POST"])

@@ -95,6 +95,7 @@ build_image() {
   echo "开始构建 Docker 镜像: ${IMAGE_NAME}:${version}"
   docker build \
     --build-arg APP_VERSION="${version}" \
+    DEBUG=true \
     -t "${IMAGE_NAME}:${version}" \
     -f Dockerfile .
 

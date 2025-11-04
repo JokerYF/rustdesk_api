@@ -19,7 +19,7 @@ from apps.db.models import (
     Log,
     AutidConnLog,
     UserPrefile,
-    Personal, Alias, ClientTags, SharePersonal,
+    Personal, Alias, SharePersonal, PeerTags,
 )
 from common.utils import get_local_time, get_randem_md5
 
@@ -546,7 +546,7 @@ class TagService:
 
     db_tag = Tag
     db_client = PeerInfo
-    db_client_tags = ClientTags
+    db_client_tags = PeerTags
 
     def __init__(self, guid, user: User | str):
         self.guid = guid

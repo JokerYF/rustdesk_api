@@ -10,7 +10,7 @@ urlpatterns = [
     path('currentUser', views.current_user),
     path('users', views.users),
     path('peers', views.peers),
-    # path('ab', views.ab),
+    path('ab', views.ab),
     path('ab/personal', views.ab_personal),
     path('ab/peer/add/<str:guid>', views.ab_peer_add),
     path('ab/peer/update/<str:guid>', views.ab_peer_update),

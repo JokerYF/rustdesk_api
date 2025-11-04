@@ -3,7 +3,8 @@ import os
 from gunicorn.glogging import Logger as GunicornLogger
 
 from base import LOG_PATH
-from common.env import GunicornConfig, PublicConfig
+from common.db_config import database_config
+from common.env import GunicornConfig, PublicConfig, DBConfig
 from common.logging_config import build_gunicorn_logging
 
 # 监听地址（可由 HOST、PORT 环境变量覆盖）
@@ -113,7 +114,8 @@ def on_starting(server):
         f"[gunicorn] starting with bind={bind}, workers={workers}, threads={threads}, worker_class={worker_class}",
     )
     server.log.info(f'[gunicorn] Django debug model: {PublicConfig.DEBUG}')
-    server.log.info(f'[gunicorn] Django DB type: {PublicConfig.DB_TYPE}')
+    server.log.info(f'[gunicorn] Django DB type: {DBConfig.DB_TYPE}')
+    server.log.info(f'[gunicorn] Django DB config: {database_config}')
     server.log.info(f'[gunicorn] RustDesk API Version: {PublicConfig.APP_VERSION}')
 
 

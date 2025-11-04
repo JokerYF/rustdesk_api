@@ -70,7 +70,7 @@ class Personal(models.Model):
     guid = models.CharField(max_length=50, verbose_name='GUID', default=get_uuid, unique=True)
     personal_name = models.CharField(max_length=50, verbose_name='地址簿名称')
     create_user = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, related_name='personal_create_user')
-    personal_type = models.CharField(verbose_name='地址簿类型', default='public',
+    personal_type = models.CharField(max_length=255, verbose_name='地址簿类型', default='public',
                                      choices=[('public', '公开'), ('private', '私有')])
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
@@ -90,6 +90,7 @@ class Tag(models.Model):
     tag = models.CharField(max_length=255, verbose_name='标签名称')
     color = models.CharField(max_length=50, verbose_name='标签颜色')
     guid = models.CharField(max_length=50, verbose_name='GUID')
+    create_user = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, related_name='tag_create_user')
 
     class Meta:
         verbose_name = '标签'
@@ -100,20 +101,20 @@ class Tag(models.Model):
         return f'{self._meta.db_table}--{self.tag, self.color, self.guid}'
 
 
-class ClientTags(models.Model):
+class PeerTags(models.Model):
     """
     标签模型
     """
-    user = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名',
-                             related_name='user_tags')
+    user = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名',
+                             related_name='user_peer_tags')
     peer_id = models.CharField(max_length=255, verbose_name='设备ID')
     tags = models.CharField(max_length=255, verbose_name='标签名称')
     guid = models.CharField(max_length=50, verbose_name='GUID')
 
     class Meta:
         verbose_name = '标签'
-        db_table = 'client_tags'
-        unique_together = [['peer_id', 'guid']]
+        db_table = 'peer_tags'
+        unique_together = [['peer_id', 'guid', 'user']]
 
     def __str__(self):
         return f'{self._meta.db_table}--{self.user, self.peer_id, self.tags, self.guid}'
@@ -233,9 +234,9 @@ class AuditFileLog(models.Model):
     controlled_uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, max_length=255,
                                         verbose_name='被控端UUID', related_name='auditfile_controlled')
     operation_type = models.IntegerField(verbose_name='操作类型', default=1)
-    operation_info = models.CharField(verbose_name='操作信息', null=True, default='')
+    operation_info = models.CharField(max_length=255, verbose_name='操作信息', null=True, default='')
     is_file = models.BooleanField(verbose_name='是否文件')
-    remote_path = models.CharField(verbose_name='远程路径', null=True, default='')
+    remote_path = models.CharField(max_length=255, verbose_name='远程路径', null=True, default='')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
     class Meta:

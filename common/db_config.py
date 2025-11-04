@@ -1,7 +1,10 @@
+import logging
 import os
 
 from base import DATA_PATH
-from common.env import PublicConfig
+from common.env import DBConfig
+
+logger = logging.getLogger(__name__)
 
 sqlite3_config = {
     'ENGINE': 'django.db.backends.sqlite3',
@@ -12,9 +15,27 @@ sqlite3_config = {
     }
 }
 
+mysql_config = {
+    'ENGINE': 'django.db.backends.mysql',
+    'NAME': DBConfig.MYSQL_DATABASE,
+    'USER': DBConfig.MYSQL_USER,
+    'PASSWORD': DBConfig.MYSQL_PASSWORD,
+    'HOST': DBConfig.MYSQL_HOST,
+    'PORT': DBConfig.MYSQL_PORT,
+}
+
 
 def db_config():
-    if PublicConfig.DB_TYPE == 'sqlite3':
+    if DBConfig.DB_TYPE == 'sqlite3':
         DATA_PATH.mkdir(exist_ok=True, parents=True)
-        return sqlite3_config
-    return None
+        config = sqlite3_config
+    elif DBConfig.DB_TYPE == 'mysql':
+        config = mysql_config
+    else:
+        raise Exception('DB_TYPE 配置错误')
+    logger.info(f'DB_TYPE: {DBConfig.DB_TYPE} - {config}')
+    print(f'DB_TYPE: {DBConfig.DB_TYPE} - {config}')
+    return config
+
+
+database_config = db_config()

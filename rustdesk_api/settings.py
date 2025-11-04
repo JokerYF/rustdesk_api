@@ -16,7 +16,7 @@ from pathlib import Path
 from pathlib import Path
 
 from base import BASE_DIR, LOG_PATH
-from common.db_config import db_config
+from common.db_config import db_config, database_config
 from common.env import PublicConfig
 from common.logging_config import build_django_logging
 
@@ -28,6 +28,9 @@ SECRET_KEY = 'django-insecure-)io=oztl360$7mt#&d86kecbaklz^w==@toytn#qepbitg2@hr
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = PublicConfig.DEBUG
+
+# Logging
+LOGGING = build_django_logging(DEBUG, LOG_PATH)
 
 ALLOWED_HOSTS = ['*']
 
@@ -97,7 +100,7 @@ WSGI_APPLICATION = 'rustdesk_api.wsgi.application'
 # }
 
 DATABASES = {
-    'default': db_config()
+    'default': database_config
 }
 
 # Password validation
@@ -117,8 +120,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
-LOGGING = build_django_logging(DEBUG, LOG_PATH)
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/

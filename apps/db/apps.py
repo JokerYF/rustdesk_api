@@ -5,6 +5,7 @@ class DbConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.db'
     verbose_name = '设备数据库'
+    label = 'database'
 
     def ready(self):
         """
