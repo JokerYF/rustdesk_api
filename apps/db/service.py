@@ -592,7 +592,7 @@ class TagService:
 
         # 删除标签本身
         self.db_tag.objects.filter(tag__in=tags_to_delete, guid=self.guid).delete()
-        logger.info(f"删除标签: {self.guid} - {tags_to_delete}")
+        logger.info(f"删除标签: {self.guid} - tags: {tags_to_delete}")
 
     def update_tag(self, tag, color=None, new_tag=None):
         data = {}
@@ -646,7 +646,7 @@ class TagService:
         :returns: 删除操作返回的 (rows_deleted, details)
         """
         res = self.user.user_tags.filter(peer_id__in=peer_id, guid=self.guid).delete()
-        logger.info(f"删除标签: {self.guid} - {peer_id}")
+        logger.info(f"删除标签: {self.guid} - peer: {peer_id}")
         return res
 
     def get_tags_by_peer_id(self, peer_id) -> list[str]:
