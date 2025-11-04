@@ -1,0 +1,30 @@
+include:
+  - ./docker-compose-network.yml
+  - ./docker-compose-mysql.yml
+
+services:
+  rustdesk_api:
+    container_name: rustdesk_api_dev
+    image: rustdesk_api:${APP_VERSION}
+    restart: unless-stopped
+    ports:
+      - "21114:21114"
+    environment:
+      - DATABASE=sqlite3
+      - TZ=Asia/Shanghai
+      - DEBUG=true
+      - APP_VERSION=dev
+      - DATABASE=mysql
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD='mysql_xSHa67'
+      - MYSQL_HOST=127.0.0.1
+      - MYSQL_PORT=3306
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      - mysql
+    networks:
+      - rustdesk_api_network
+
+

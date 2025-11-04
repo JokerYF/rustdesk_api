@@ -1,0 +1,3 @@
+networks:
+  rustdesk_api_network:
+    driver: bridge
