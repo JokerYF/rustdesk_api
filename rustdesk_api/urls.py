@@ -34,5 +34,5 @@ if PublicConfig.DEBUG:
     urlpatterns = [
                       path('__debug__/', include(debug_toolbar.urls)),
                   ] + urlpatterns
-    logger.info("[django] debug toolbar enabled.")
-    logger.info(f"[django] debug toolbar internal IPs: {INTERNAL_IPS}.")
+    logger.debug("[django] debug toolbar enabled.")
+    logger.debug(f"[django] debug toolbar internal IPs: {INTERNAL_IPS}.")
