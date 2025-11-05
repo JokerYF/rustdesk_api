@@ -50,19 +50,6 @@ class PeerInfo(models.Model):
         return f'{self.device_name}-({self.uuid})'
 
 
-class UserToSystem(models.Model):
-    """
-    用户与设备关系模型
-    """
-    username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
-    uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
-
-    class Meta:
-        verbose_name = '用户与设备关系'
-        verbose_name_plural = '用户与设备关系'
-        db_table = 'user_to_system'
-
-
 class Personal(models.Model):
     """
     地址簿
