@@ -98,12 +98,15 @@ def login(request: HttpRequest):
 
     try:
         user = UserService().get_user_by_name(username=username)
-        assert user.check_password(password)
+        assert user and user.check_password(password)
+        request.session['username'] = username
     except (User.DoesNotExist, AssertionError):
         logger.error(traceback.format_exc())
         return JsonResponse({'error': '用户名或密码错误'})
 
     token = token_service.create_token(username, uuid)
+    request.session['token'] = token
+    request.session['username'] = username
 
     # Server端记录登录信息
     LoginClientService().update_login_status(
@@ -122,6 +125,8 @@ def login(request: HttpRequest):
     #     log_message=f'用户 {username} 登录'
     # )
 
+    logger.debug(f'session: {request.session.items()}')
+    logger.debug(f'user info: {token_service.user_info}')
     return JsonResponse(
         {
             'access_token': token,

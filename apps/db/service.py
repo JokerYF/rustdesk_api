@@ -2,13 +2,14 @@ import ast
 import json
 import logging
 from datetime import timedelta
-from typing import TypeVar
 
 from django.contrib.auth.models import User, Group, Permission
+from django.contrib.sessions.models import Session
 from django.db import models
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest
+from django.utils import timezone
 
 from apps.db.models import (
     HeartBeat,
@@ -21,12 +22,10 @@ from apps.db.models import (
     UserPrefile,
     Personal, Alias, ClientTags, SharePersonal,
 )
+from common.env import PublicConfig
 from common.utils import get_local_time, get_randem_md5
 
 logger = logging.getLogger(__name__)
-
-# 定义泛型类型变量，用于表示各种模型类型
-ModelType = TypeVar("ModelType", bound=models.Model)
 
 
 class BaseService:
@@ -452,6 +451,21 @@ class TokenService(BaseService):
     def __init__(self, request: HttpRequest | None = None):
         self.request = request
 
+    @property
+    def session(self):
+        return self.request.session
+
+    @property
+    def is_session_valid(self):
+        try:
+            session = Session.objects.get(session_key=self.session.session_key)
+            return session.expire_date > timezone.now()
+        except Session.DoesNotExist:
+            return False
+
+    def set_session_expiry(self, timeout=PublicConfig.SESSION_TIMEOUT):
+        self.session.set_expiry(timeout)
+
     def create_token(self, username, uuid):
         username = self.get_user_info(username)
         token = f"{get_randem_md5()}_{username}"
@@ -465,7 +479,7 @@ class TokenService(BaseService):
         logger.info(f"创建令牌: user: {username} uuid: {uuid} token: {token}")
         return token
 
-    def check_token(self, token, timeout=3600):
+    def check_token(self, token, timeout=PublicConfig.SESSION_TIMEOUT):
         if _token := self.db.objects.filter(token=token).first():
             return _token.last_used_at > get_local_time() - timedelta(seconds=timeout)
         self.db.objects.filter(token=token).delete()
@@ -475,6 +489,7 @@ class TokenService(BaseService):
         if _token := self.db.objects.filter(token=token).first():
             _token.last_used_at = get_local_time()
             _token.save()
+            self.set_session_expiry()
             return True
         return False
 
@@ -482,6 +497,7 @@ class TokenService(BaseService):
         if _token := self.db.objects.filter(uuid=uuid).first():
             _token.last_used_at = get_local_time()
             _token.save()
+            self.set_session_expiry()
             logger.info(f"通过uuid更新令牌: {uuid} - {_token.token}")
             return True
         return False
@@ -493,6 +509,7 @@ class TokenService(BaseService):
 
     def delete_token_by_uuid(self, uuid):
         res = self.db.objects.filter(uuid=uuid).delete()
+        self.session.delete(self.session.session_key)
         logger.info(f"通过uuid删除令牌: {uuid}")
         return res
 
@@ -510,11 +527,15 @@ class TokenService(BaseService):
         return None
 
     @property
-    def user_info(self) -> User | None:
-        if self.request:
-            auth = self.authorization
-            username = auth.split("_")[-1]
+    def user_info(self) -> User | None:  # TODO 这里需要改成json反序列化为User对象的形式，避免重复查库
+        if username := self.username:
             return UserService().get_user_by_name(username)
+        return None
+
+    @property
+    def username(self):
+        if self.session:
+            return self.session.get("username")
         return None
 
     @property

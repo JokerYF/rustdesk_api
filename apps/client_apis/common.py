@@ -4,6 +4,7 @@ import time
 import traceback
 from functools import wraps
 
+from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse, HttpResponse
 
 from apps.db.service import TokenService, PeerInfoService
@@ -21,6 +22,7 @@ def check_login(func):
     """
 
     @wraps(func)
+    @login_required
     def wrapper(request: HttpRequest, *args, **kwargs):
         headers = request.headers
         if 'Authorization' not in headers:

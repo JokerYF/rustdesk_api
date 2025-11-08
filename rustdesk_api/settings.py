@@ -144,3 +144,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # 注意：仅在受信任代理链路下开启
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# session设置
+SESSION_COOKIE_AGE = PublicConfig.SESSION_TIMEOUT  # session失效时间
+# SESSION_SAVE_EVERY_REQUEST = True  # 每次请求都保存session
