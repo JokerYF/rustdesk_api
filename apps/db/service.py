@@ -112,6 +112,8 @@ class UserService(BaseService):
             user = self.get_user_by_email(email)
         else:
             raise ValueError("Either username or email must be provided.")
+        if not user:
+            raise ValueError("User does not exist.")
         user.set_password(password)
         user.save()
         logger.info(f"设置用户密码: {user}")
@@ -836,7 +838,7 @@ class PersonalService(BaseService):
         )
         personal.personal_user.create(user=create_user)
         logger.info(
-            f'创建地址簿: name: {personal_name}, create_user: {create_user}, type: {personal_type}: guid: {personal.guid}'
+            f'创建地址簿: name: {personal_name}, create_user: {create_user}, type: {personal_type}, guid: {personal.guid}'
         )
         return personal
 
@@ -847,7 +849,6 @@ class PersonalService(BaseService):
             create_user=username,
             personal_type="private"
         )
-        logger.info(f'创建个人地址簿: user: {username}, guid: {personal.personal_name}')
         return personal
 
     def get_personal(self, guid):
