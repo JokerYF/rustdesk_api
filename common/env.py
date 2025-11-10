@@ -14,6 +14,7 @@ class PublicConfig:
     DEBUG = str2bool(get_env('DEBUG', False))
     APP_VERSION = get_env('APP_VERSION', '')
     SESSION_TIMEOUT = int(get_env('SESSION_TIMEOUT', 3600))
+    SESSION_INTERVAL = int(get_env('SESSION_INTERVAL', 10))
 
 
 class GunicornConfig:

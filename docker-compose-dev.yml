@@ -1,13 +1,14 @@
 services:
   rustdesk_api:
     container_name: rustdesk_api_dev
-    image: rustdesk_api:${APP_VERSION}
+    image: rustdesk_api:dev
     restart: unless-stopped
     ports:
       - "21114:21114"
     environment:
       - DATABASE=sqlite3
       - TZ=Asia/Shanghai
+      - DEBUG=1
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data

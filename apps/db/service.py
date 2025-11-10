@@ -77,6 +77,7 @@ class TokenService(BaseService):
     def __init__(self, request: HttpRequest | None = None):
         self.request = request
         self.default_timeout = PublicConfig.SESSION_TIMEOUT
+        self.default_interval = PublicConfig.SESSION_INTERVAL
 
     @property
     def session(self):
@@ -106,6 +107,13 @@ class TokenService(BaseService):
         Session.objects.filter(session_key__in=sid).delete()
         logger.debug(f"删除Django Session: {sid}")
 
+    def __update_session_expiry(self, sid):
+        _interval = self.default_timeout - self.__get_session(sid).get_expiry_age()
+        if _interval > self.default_interval:
+            self.__get_session(sid).set_expiry(self.default_timeout)
+            logger.debug(f"更新 Django Session: {sid}")
+        logger.debug(f"无需更新 Session: {sid} - interval: {_interval}")
+
     def create_token(self, username, uuid, sid):
         username = self.get_user_info(username)
         # token = f"{get_randem_md5()}_{username}"
@@ -134,14 +142,14 @@ class TokenService(BaseService):
         qs = self.db.objects.filter(token=token).first()
         if not qs:
             return False
-        self.__get_session(qs.sid).set_expiry(self.default_timeout)
+        self.__update_session_expiry(qs.sid)
         return True
 
     def update_token_by_uuid(self, uuid):
         qs = self.db.objects.filter(uuid=uuid).first()
         if not qs:
             return False
-        self.__get_session(qs.sid).set_expiry(self.default_timeout)
+        self.__update_session_expiry(qs.sid)
         return True
 
     def delete_token(self, token):
