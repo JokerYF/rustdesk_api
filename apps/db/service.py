@@ -256,6 +256,8 @@ class UserService(BaseService):
             user = self.get_user_by_email(email)
         else:
             raise ValueError("Either username or email must be provided.")
+        if user is None:
+            raise ValueError("User does not exist.")
         user.set_password(password)
         user.save()
         logger.info(f"设置用户密码: {user}")
