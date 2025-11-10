@@ -1,12 +1,13 @@
 from django.contrib.auth.models import User, Group, AbstractUser
 from django.db import models
 
+from common.mixin import ModelToDictMixin
 from common.utils import get_uuid
 
 
 # Create your models here.
 
-class HeartBeat(models.Model):
+class HeartBeat(models.Model, ModelToDictMixin):
     """
     心跳测试模型
     """
@@ -24,7 +25,7 @@ class HeartBeat(models.Model):
         unique_together = [['uuid', 'peer_id']]
 
 
-class PeerInfo(models.Model):
+class PeerInfo(models.Model, ModelToDictMixin):
     """
     客户端上报的客户端信息模型
     """
@@ -50,7 +51,7 @@ class PeerInfo(models.Model):
         return f'{self.device_name}-({self.uuid})'
 
 
-class Personal(models.Model):
+class Personal(models.Model, ModelToDictMixin):
     """
     地址簿
     """
@@ -69,7 +70,7 @@ class Personal(models.Model):
         unique_together = [['personal_name', 'create_user']]
 
 
-class Tag(models.Model):
+class Tag(models.Model, ModelToDictMixin):
     """
     标签模型
     """
@@ -87,7 +88,7 @@ class Tag(models.Model):
         return f'{self._meta.db_table}--{self.tag, self.color, self.guid}'
 
 
-class ClientTags(models.Model):
+class ClientTags(models.Model, ModelToDictMixin):
     """
     标签模型
     """
@@ -106,7 +107,7 @@ class ClientTags(models.Model):
         return f'{self._meta.db_table}--{self.user, self.peer_id, self.tags, self.guid}'
 
 
-class Token(models.Model):
+class Token(models.Model, ModelToDictMixin):
     """
     令牌模型
     """
@@ -129,7 +130,7 @@ class Token(models.Model):
         return f'{self.username} ({self.uuid}-{self.token})'
 
 
-class LoginClient(models.Model):
+class LoginClient(models.Model, ModelToDictMixin):
     """
     登录客户端模型
     """
@@ -153,7 +154,7 @@ class LoginClient(models.Model):
         db_table = 'login_client'
 
 
-class Log(models.Model):
+class Log(models.Model, ModelToDictMixin):
     """
     日志模型
     """
@@ -187,7 +188,7 @@ class Log(models.Model):
         db_table = 'log'
 
 
-class AutidConnLog(models.Model):
+class AutidConnLog(models.Model, ModelToDictMixin):
     """
     审计日志模型
     """
@@ -211,7 +212,7 @@ class AutidConnLog(models.Model):
         db_table = 'audit_log'
 
 
-class AuditFileLog(models.Model):
+class AuditFileLog(models.Model, ModelToDictMixin):
     """
     审计文件模型
     """
@@ -233,7 +234,7 @@ class AuditFileLog(models.Model):
         db_table = 'audit_file'
 
 
-class UserPrefile(models.Model):
+class UserPrefile(models.Model, ModelToDictMixin):
     """
     用户配置模型
     """
@@ -249,7 +250,7 @@ class UserPrefile(models.Model):
         return f'{self.user.username} {self.group.name if self.group else "None"}'
 
 
-class UserPersonal(models.Model):
+class UserPersonal(models.Model, ModelToDictMixin):
     """
     用户与个人地址簿关系模型
     """
@@ -264,7 +265,7 @@ class UserPersonal(models.Model):
         db_table = 'user_personal'
 
 
-class PeerPersonal(models.Model):
+class PeerPersonal(models.Model, ModelToDictMixin):
     """
     设备与个人地址簿关系模型
     """
@@ -279,7 +280,7 @@ class PeerPersonal(models.Model):
         db_table = 'peer_personal'
 
 
-class SharePersonal(models.Model):
+class SharePersonal(models.Model, ModelToDictMixin):
     """
     分享地址簿记录
     """
@@ -300,7 +301,7 @@ class SharePersonal(models.Model):
         unique_together = [['guid', 'to_share_id']]  # 限定一个地址簿只能分享给同一个人一次
 
 
-class Alias(models.Model):
+class Alias(models.Model, ModelToDictMixin):
     """
     别名模型
     """
