@@ -98,7 +98,7 @@ def login(request: HttpRequest):
 
     try:
         user = UserService().get_user_by_name(username=username)
-        assert user.check_password(password)
+        assert user and user.check_password(password)
     except (User.DoesNotExist, AssertionError):
         logger.error(traceback.format_exc())
         return JsonResponse({'error': '用户名或密码错误'})
