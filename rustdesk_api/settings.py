@@ -63,6 +63,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 基于 Authorization 的用户识别，确保 login_required 兼容 Token
+    'apps.common.middleware.TokenAuthMiddleware',
     'apps.common.middleware.RealIPMiddleware',
 ]
 

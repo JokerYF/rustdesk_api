@@ -103,7 +103,11 @@ def login(request: HttpRequest):
         logger.error(traceback.format_exc())
         return JsonResponse({'error': '用户名或密码错误'})
 
-    token = token_service.create_token(username, uuid)
+    request.session.save()
+    sid = request.session.session_key
+    request.session['username'] = username
+    token = token_service.create_token(username, uuid, sid)
+    request.session['token'] = token
 
     # Server端记录登录信息
     LoginClientService().update_login_status(
@@ -121,7 +125,7 @@ def login(request: HttpRequest):
     #     log_type='login',
     #     log_message=f'用户 {username} 登录'
     # )
-
+    logger.debug(f'用户 {username} 登录，{request.session.items()}')
     return JsonResponse(
         {
             'access_token': token,

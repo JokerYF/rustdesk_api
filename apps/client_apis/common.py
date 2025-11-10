@@ -33,7 +33,7 @@ def check_login(func):
 
         system_info = PeerInfoService()
         client_info = system_info.get_peer_info_by_uuid(uuid)
-        if not token_service.check_token(token, timeout=3600):
+        if not token_service.check_token(token):
             # Server端记录登录信息
             # LoginClientService().update_logout_status(
             #     uuid=uuid,

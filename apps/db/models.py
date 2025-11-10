@@ -115,6 +115,7 @@ class Token(models.Model):
     # uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
     uuid = models.CharField(max_length=255, verbose_name='设备UUID', null=True)
     token = models.CharField(max_length=255, verbose_name='令牌')
+    sid = models.CharField(max_length=255, verbose_name='会话ID')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     last_used_at = models.DateTimeField(auto_now=True, verbose_name='最后使用时间')
 

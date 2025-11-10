@@ -1,10 +1,13 @@
 import ast
 import json
 import logging
-from datetime import timedelta
+from importlib import import_module
 from typing import TypeVar
 
+from django.conf import settings
 from django.contrib.auth.models import User, Group, Permission
+from django.contrib.sessions.backends.base import SessionBase
+from django.contrib.sessions.models import Session
 from django.db import models
 from django.db import transaction
 from django.db.models import Q
@@ -19,14 +22,19 @@ from apps.db.models import (
     Log,
     AutidConnLog,
     UserPrefile,
-    Personal, Alias, ClientTags, SharePersonal,
+    Personal,
+    Alias,
+    ClientTags,
+    SharePersonal,
 )
-from common.utils import get_local_time, get_randem_md5
+from common.env import PublicConfig
+from common.utils import get_local_time
 
 logger = logging.getLogger(__name__)
 
 # 定义泛型类型变量，用于表示各种模型类型
 ModelType = TypeVar("ModelType", bound=models.Model)
+SessionStore = import_module(settings.SESSION_ENGINE).SessionStore
 
 
 class BaseService:
@@ -55,6 +63,142 @@ class BaseService:
         if isinstance(peer_id, str):
             peer_id = PeerInfoService().get_peer_info_by_peer_id(peer_id)
         return peer_id
+
+
+class TokenService(BaseService):
+    """
+    令牌服务类
+
+    用于处理令牌相关的业务逻辑
+    """
+
+    db = Token
+
+    def __init__(self, request: HttpRequest | None = None):
+        self.request = request
+        self.default_timeout = PublicConfig.SESSION_TIMEOUT
+
+    @property
+    def session(self):
+        if session := self.request.session:
+            return session
+        return self.__get_session()
+
+    def __get_session(self, sid=None) -> SessionBase:
+        """
+
+        :param sid:
+        :return: SessionBase
+        """
+        if not sid:
+            sid = self.authorization.split('_')[0]
+        return SessionStore(session_key=sid)
+
+    @staticmethod
+    def check_session_key(sid):
+        session_qs = Session.objects.filter(session_key=sid)
+        if not session_qs.exists():
+            return False
+        return True
+
+    @staticmethod
+    def delete_session(*sid):
+        Session.objects.filter(session_key__in=sid).delete()
+        logger.debug(f"删除Django Session: {sid}")
+
+    def create_token(self, username, uuid, sid):
+        username = self.get_user_info(username)
+        # token = f"{get_randem_md5()}_{username}"
+        token = f"{sid}_{username}"
+        self.db.objects.create(
+            username=self.get_user_info(username),
+            uuid=uuid,
+            token=token,
+            sid=sid,
+            created_at=get_local_time(),
+            last_used_at=get_local_time(),
+        )
+        logger.info(f"创建令牌: user: {username} uuid: {uuid} token: {token}")
+        return token
+
+    def check_token(self, token):
+        sid = token.split('_')[0]
+        if not self.check_session_key(sid):
+            return False
+        if self.session and self.session.get_expiry_age() < self.default_timeout:
+            self.db.objects.filter(token=token).delete()
+            return False
+        return True
+
+    def update_token(self, token):
+        qs = self.db.objects.filter(token=token).first()
+        if not qs:
+            return False
+        self.__get_session(qs.sid).set_expiry(self.default_timeout)
+        return True
+
+    def update_token_by_uuid(self, uuid):
+        qs = self.db.objects.filter(uuid=uuid).first()
+        if not qs:
+            return False
+        self.__get_session(qs.sid).set_expiry(self.default_timeout)
+        return True
+
+    def delete_token(self, token):
+        qs = self.db.objects.filter(token=token).first()
+        if qs:
+            self.delete_session(qs.sid)
+            logger.info(f"删除令牌: {token}")
+        qs.delete()
+        return qs
+
+    def delete_token_by_user(self, username: User | str):
+        if isinstance(username, User):
+            username = username.username
+        qs = self.db.objects.filter(username=username).all()
+        self.delete_session(
+            *[qs.sid for qs in qs]
+        )
+        qs.delete()
+        logger.info(f"通过用户名删除令牌: {username}")
+        return qs
+
+    @property
+    def authorization(self) -> str | None:
+        if self.request:
+            return self.request.headers.get("Authorization")[7:]
+        return None
+
+    @property
+    def sid(self):
+        return self.session.get('token') or self.authorization.split("_")[0]
+
+    @property
+    def username(self):
+        return self.session.get('username') or self.authorization.split("_")[-1]
+
+    @property
+    def user_info(self) -> User | None:
+        return UserService().get_user_by_name(self.username)
+
+    @property
+    def request_body(self) -> dict | list:
+        if self.request:
+            if body := self.request.body:
+                return json.loads(body)
+        return {}
+
+    @property
+    def request_query(self):
+        if self.request:
+            if params := self.request.GET:
+                return params.dict()
+        return {}
+
+    def get_cur_uuid_by_token(self, token) -> str | None:
+        if peer := self.db.objects.filter(token=token).first():
+            return peer.uuid
+        return None
 
 
 class UserService(BaseService):
@@ -276,6 +420,7 @@ class GroupService(BaseService):
             if to_create:
                 UserPrefile.objects.bulk_create(to_create)
                 # logger.info(f"创建用户组: {to_create}")
+        return group
 
 
 class PermissionService(BaseService):
@@ -438,103 +583,6 @@ class LoginClientService(BaseService):
 
     def get_login_client_list(self, username):
         return self.db.objects.filter(username=self.get_user_info(username)).all()
-
-
-class TokenService(BaseService):
-    """
-    令牌服务类
-
-    用于处理令牌相关的业务逻辑
-    """
-
-    db = Token
-
-    def __init__(self, request: HttpRequest | None = None):
-        self.request = request
-
-    def create_token(self, username, uuid):
-        username = self.get_user_info(username)
-        token = f"{get_randem_md5()}_{username}"
-        self.db.objects.create(
-            username=self.get_user_info(username),
-            uuid=uuid,
-            token=token,
-            created_at=get_local_time(),
-            last_used_at=get_local_time(),
-        )
-        logger.info(f"创建令牌: user: {username} uuid: {uuid} token: {token}")
-        return token
-
-    def check_token(self, token, timeout=3600):
-        if _token := self.db.objects.filter(token=token).first():
-            return _token.last_used_at > get_local_time() - timedelta(seconds=timeout)
-        self.db.objects.filter(token=token).delete()
-        return False
-
-    def update_token(self, token):
-        if _token := self.db.objects.filter(token=token).first():
-            _token.last_used_at = get_local_time()
-            _token.save()
-            return True
-        return False
-
-    def update_token_by_uuid(self, uuid):
-        if _token := self.db.objects.filter(uuid=uuid).first():
-            _token.last_used_at = get_local_time()
-            _token.save()
-            logger.info(f"通过uuid更新令牌: {uuid} - {_token.token}")
-            return True
-        return False
-
-    def delete_token(self, token):
-        res = self.db.objects.filter(token=token).delete()
-        logger.info(f"删除令牌: {token}")
-        return res
-
-    def delete_token_by_uuid(self, uuid):
-        res = self.db.objects.filter(uuid=uuid).delete()
-        logger.info(f"通过uuid删除令牌: {uuid}")
-        return res
-
-    def delete_token_by_user(self, username: User | str):
-        if isinstance(username, User):
-            username = username.username
-        res = self.db.objects.filter(username=username).delete()
-        logger.info(f"通过用户名删除令牌: {username}")
-        return res
-
-    @property
-    def authorization(self) -> str | None:
-        if self.request:
-            return self.request.headers.get("Authorization")[7:]
-        return None
-
-    @property
-    def user_info(self) -> User | None:
-        if self.request:
-            auth = self.authorization
-            username = auth.split("_")[-1]
-            return UserService().get_user_by_name(username)
-        return None
-
-    @property
-    def request_body(self) -> dict | list:
-        if self.request:
-            if body := self.request.body:
-                return json.loads(body)
-        return {}
-
-    @property
-    def request_query(self):
-        if self.request:
-            if params := self.request.GET:
-                return params.dict()
-        return {}
-
-    def get_cur_uuid_by_token(self, token) -> str | None:
-        if peer := self.db.objects.filter(token=token).first():
-            return peer.uuid
-        return None
 
 
 class TagService:

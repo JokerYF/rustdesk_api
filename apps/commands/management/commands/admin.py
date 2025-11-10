@@ -70,11 +70,11 @@ class Command(BaseCommand):
             username = options.get('user')
             password = options.get('passwd')
 
-            if user := self.user_service.get_user_by_name(username):
-                user.set_password(password)
+            try:
+                user = self.user_service.set_password(password=password, username=username)
                 TokenService().delete_token_by_user(user.username)
                 print(f'用户 {username} 已存在，已更新密码 {password}')
-            else:
+            except ValueError:
                 self.user_service.create_user(
                     username=username,
                     password=password,
@@ -83,17 +83,27 @@ class Command(BaseCommand):
                     is_staff=True
                 )
                 print(f'用户 {username} 创建成功，密码 {password}')
+
         elif options.get('group') and options.get('user'):
             group_name = options.get('group')
             user_name = options.get('user')
-            self.group_service.add_user_to_group(user_name, group_name=group_name)
+            group = self.group_service.add_user_to_group(user_name, group_name=group_name)
+            if group.name != group_name:
+                print(f'组 {group_name} 不已存在，已添加用户 {user_name} 到默认组：{group.name}')
+                return
+            print(f'用户 {user_name} 已添加到组 {group_name}')
         elif options.get('group'):
             group_name = options.get('group')
             self.group_service.create_group(group_name)
+            print(f'已创建组 {group_name}')
         elif personal := options.get('personal'):
-            user = self.get_admin_user
+            if username := options.get('user'):
+                user = self.user_service.get_user_by_name(username)
+            else:
+                user = self.get_admin_user
             try:
                 PersonalService().create_personal(personal_name=personal, create_user=user, personal_type='public')
+                print(f'已创建 Personal: {personal}, 创建者: {user.username}')
             except Exception as e:
                 print(f'当前已存在 Personal: {personal}')
         else:
