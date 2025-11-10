@@ -897,7 +897,7 @@ class PersonalService(BaseService):
             create_user=username,
             personal_type="private"
         )
-        logger.info(f'创建个人地址簿: user: {username}, guid: {personal.personal_name}')
+        logger.info(f'创建个人地址簿: user: {username}, personal_name: {personal.personal_name}, guid: {personal.guid}')
         return personal
 
     def get_personal(self, guid):
