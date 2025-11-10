@@ -108,11 +108,8 @@ class TokenService(BaseService):
         logger.debug(f"删除Django Session: {sid}")
 
     def __update_session_expiry(self, sid):
-        _interval = self.default_timeout - self.__get_session(sid).get_expiry_age()
-        if _interval > self.default_interval:
-            self.__get_session(sid).set_expiry(self.default_timeout)
-            logger.debug(f"更新 Django Session: {sid}")
-        logger.debug(f"无需更新 Session: {sid} - interval: {_interval}")
+        self.__get_session(sid).set_expiry(self.default_timeout)
+        logger.debug(f"更新 Django Session: {sid}")
 
     def create_token(self, username, uuid, sid):
         username = self.get_user_info(username)
