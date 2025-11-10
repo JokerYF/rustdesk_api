@@ -886,7 +886,7 @@ class PersonalService(BaseService):
         )
         personal.personal_user.create(user=create_user)
         logger.info(
-            f'创建地址簿: name: {personal_name}, create_user: {create_user}, type: {personal_type}: guid: {personal.guid}'
+            f'创建地址簿: name: {personal_name}, create_user: {create_user}, type: {personal_type}, guid: {personal.guid}'
         )
         return personal
 
