@@ -113,7 +113,7 @@ class Token(models.Model):
     username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
     # username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
     # uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
-    uuid = models.CharField(max_length=255, verbose_name='设备UUID', null=True)
+    uuid = models.CharField(max_length=255, verbose_name='设备UUID')
     token = models.CharField(max_length=255, verbose_name='令牌')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     last_used_at = models.DateTimeField(auto_now=True, verbose_name='最后使用时间')
@@ -123,6 +123,7 @@ class Token(models.Model):
         verbose_name_plural = '令牌'
         ordering = ['-created_at']
         db_table = 'token'
+        unique_together = [['username', 'uuid']]
 
     def __str__(self):
         return f'{self.username} ({self.uuid}-{self.token})'

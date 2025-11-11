@@ -4,7 +4,7 @@ import logging
 from datetime import timedelta
 from typing import TypeVar
 
-from django.contrib.auth.models import User, Group, Permission
+from django.contrib.auth.models import User, Group
 from django.db import models
 from django.db import transaction
 from django.db.models import Q
@@ -21,6 +21,7 @@ from apps.db.models import (
     UserPrefile,
     Personal, Alias, ClientTags, SharePersonal,
 )
+from common.error import UserNotFoundError
 from common.utils import get_local_time, get_randem_md5
 
 logger = logging.getLogger(__name__)
@@ -112,6 +113,8 @@ class UserService(BaseService):
             user = self.get_user_by_email(email)
         else:
             raise ValueError("Either username or email must be provided.")
+        if not user:
+            raise UserNotFoundError(email or username)
         user.set_password(password)
         user.save()
         logger.info(f"设置用户密码: {user}")
@@ -149,39 +152,6 @@ class UserService(BaseService):
 
     def get_list_by_status(self, status, page=1, page_size=10):
         return self.__get_list(status=status, page=page, page_size=page_size)
-
-    def set_user_permissions(self, username, *permissions):
-        permissions = self.db.objects.filter(
-            user_permissions__codename__in=[*permissions]
-        )
-        user = self.get_user_by_name(username)
-        if user:
-            user.user_permissions.add(*permissions)
-
-    def del_user_permissions(self, username, *permissions):
-        permissions = self.db.objects.filter(
-            user_permissions__codename__in=[*permissions]
-        )
-
-        user = self.get_user_by_name(username)
-        if user:
-            user.user_permissions.remove(*permissions)
-            logger.info(f"删除用户权限: {user}")
-
-    def get_user_permissions(self, username):
-        user = self.get_user_by_name(username)
-        if user:
-            return user.user_permissions.all()
-        return None
-
-    def is_user_has_permission(self, username, *permissions) -> bool:
-        permissions = self.db.objects.filter(
-            user_permissions__codename__in=[*permissions]
-        )
-        user = self.get_user_by_name(username)
-        if user:
-            return user.has_perm(*permissions)
-        return False
 
     def get_user_by_id(self, user_id) -> User:
         return self.db.objects.filter(id=user_id).first()
@@ -278,34 +248,6 @@ class GroupService(BaseService):
                 # logger.info(f"创建用户组: {to_create}")
 
 
-class PermissionService(BaseService):
-    db = Permission
-
-    def get_permissions_list(self):
-        return self.db.objects.all()
-
-    def create_permission(self, content_type_id, name, codename) -> Permission:
-        perm = self.db.objects.create(
-            content_type_id=content_type_id, name=name, codename=codename
-        )
-        logger.info(
-            f"创建权限: content_type_id={content_type_id}, name={name}, codename={codename}"
-        )
-        return perm
-
-    def get_by_content_type_id(self, content_type_id):
-        return self.db.objects.filter(content_type_id=content_type_id).all()
-
-    def get_by_codename(self, codename):
-        return self.db.objects.filter(codename=codename).all()
-
-    def get_by_name(self, name):
-        return self.db.objects.filter(name=name).all()
-
-    def get_permissions(self, *permission_name):
-        return self.db.objects.filter(name__in=permission_name).all()
-
-
 class PeerInfoService(BaseService):
     db = PeerInfo
 
@@ -390,7 +332,7 @@ class LoginClientService(BaseService):
         _type = 1 if client_type.lower() == 'web' else 2
         return _type
 
-    def update_login_status(self, username, uuid, platform, client_type, client_name, peer_id=None):
+    def update_login_status(self, username, uuid, platform, client_name, client_type='api', peer_id=None):
         if not self.db.objects.filter(username=username, uuid=uuid).update(
                 username=self.get_user_info(username),
                 uuid=uuid,
@@ -455,15 +397,23 @@ class TokenService(BaseService):
     def create_token(self, username, uuid, client_type='client'):
         assert client_type in ['client', 'web', 'api']
         username = self.get_user_info(username)
-        token = f"{get_randem_md5()}_{client_type}_{username}"
-        self.db.objects.create(
-            username=self.get_user_info(username),
-            uuid=uuid,
-            token=token,
-            created_at=get_local_time(),
-            last_used_at=get_local_time(),
-        )
-        logger.info(f"创建令牌: user: {username} uuid: {uuid} token: {token}")
+        token = f"{get_randem_md5()}_{username}"
+
+        if qs := self.db.objects.filter(username=username, uuid=uuid).first():
+            qs.token = token
+            qs.created_at = get_local_time()
+            qs.last_used_at = get_local_time()
+            qs.save()
+            logger.info(f"更新令牌: user: {username} uuid: {uuid} token: {token}")
+        else:
+            self.db.objects.create(
+                username=self.get_user_info(username),
+                uuid=uuid,
+                token=token,
+                created_at=get_local_time(),
+                last_used_at=get_local_time(),
+            )
+            logger.info(f"创建令牌: user: {username} uuid: {uuid} token: {token}")
         return token
 
     def check_token(self, token, timeout=3600):
@@ -845,7 +795,7 @@ class PersonalService(BaseService):
         )
         personal.personal_user.create(user=create_user)
         logger.info(
-            f'创建地址簿: name: {personal_name}, create_user: {create_user}, type: {personal_type}: guid: {personal.guid}'
+            f'创建地址簿: name: {personal_name}, create_user: {create_user}, type: {personal_type}, guid: {personal.guid}'
         )
         return personal
 
@@ -856,7 +806,6 @@ class PersonalService(BaseService):
             create_user=username,
             personal_type="private"
         )
-        logger.info(f'创建个人地址簿: user: {username}, guid: {personal.personal_name}')
         return personal
 
     def get_personal(self, guid):

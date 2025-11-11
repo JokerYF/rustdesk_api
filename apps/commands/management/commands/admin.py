@@ -3,6 +3,7 @@ import uuid
 from django.core.management.base import BaseCommand
 
 from apps.db.service import UserService, GroupService, TokenService, PersonalService
+from common.error import UserNotFoundError
 
 
 class Command(BaseCommand):
@@ -70,11 +71,11 @@ class Command(BaseCommand):
             username = options.get('user')
             password = options.get('passwd')
 
-            if user := self.user_service.get_user_by_name(username):
-                user.set_password(password)
+            try:
+                user = self.user_service.set_password(password=password, username=username)
                 TokenService().delete_token_by_user(user.username)
                 print(f'用户 {username} 已存在，已更新密码 {password}')
-            else:
+            except (ValueError, UserNotFoundError):
                 self.user_service.create_user(
                     username=username,
                     password=password,
@@ -83,6 +84,7 @@ class Command(BaseCommand):
                     is_staff=True
                 )
                 print(f'用户 {username} 创建成功，密码 {password}')
+
         elif options.get('group') and options.get('user'):
             group_name = options.get('group')
             user_name = options.get('user')

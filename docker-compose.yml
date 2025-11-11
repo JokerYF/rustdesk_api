@@ -8,6 +8,8 @@ services:
     environment:
       - DATABASE=sqlite3
       - TZ=Asia/Shanghai
+      - WORKERS=4
+      - THREADS=8
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
