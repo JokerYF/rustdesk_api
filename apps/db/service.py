@@ -332,7 +332,7 @@ class LoginClientService(BaseService):
         _type = 1 if client_type.lower() == 'web' else 2
         return _type
 
-    def update_login_status(self, username, uuid, platform, client_type, client_name, peer_id=None):
+    def update_login_status(self, username, uuid, platform, client_name, client_type='api', peer_id=None):
         if not self.db.objects.filter(username=username, uuid=uuid).update(
                 username=self.get_user_info(username),
                 uuid=uuid,
