@@ -9,8 +9,6 @@ from django.views.decorators.http import require_http_methods
 
 from apps.client_apis.common import check_login, request_debug_log, debug_request_None
 from apps.db.models import PeerInfo
-from apps.client_apis.common import check_login_by_json, request_debug_log, debug_request_None
-from apps.db.models import PeerInfo, Personal
 from apps.db.service import HeartBeatService, PeerInfoService, TokenService, UserService, \
     LoginClientService
 from common.utils import get_local_time
@@ -137,7 +135,7 @@ def login(request: HttpRequest):
 
 @require_http_methods(["POST"])
 @request_debug_log
-@check_login_by_json
+@check_login
 def logout(request: HttpRequest):
     token_service = TokenService(request=request)
     token = token_service.authorization
@@ -166,7 +164,7 @@ def logout(request: HttpRequest):
 
 @require_http_methods(["POST"])
 @request_debug_log
-@check_login_by_json
+@check_login
 def current_user(request: HttpRequest):
     """
     获取当前用户信息
@@ -188,7 +186,7 @@ def current_user(request: HttpRequest):
 
 @require_http_methods(["GET"])
 @request_debug_log
-@check_login_by_json
+@check_login
 def users(request: HttpRequest):
     """
     获取所有用户信息
@@ -226,7 +224,7 @@ def users(request: HttpRequest):
 
 @require_http_methods(["GET"])
 @request_debug_log
-@check_login_by_json
+@check_login
 def peers(request: HttpRequest):
     """
     展示当前用户可以看到的设备信息
@@ -268,7 +266,7 @@ def peers(request: HttpRequest):
 @require_http_methods(["GET"])
 @request_debug_log
 @debug_request_None  # 官方对于设备组有权限控制，目前无法控制，直接返回None，接口不报错即可
-@check_login_by_json
+@check_login
 def device_group_accessible(request):
     """
     admin获取当前服务端所有设备信息

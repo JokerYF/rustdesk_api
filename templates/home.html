@@ -1,11 +1,195 @@
-<!-- templates/home.html -->
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Home</title>
+    {% load static %}
+    <style>
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            color: #1f2328;
+            background: #ffffff;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+            padding: 0 16px;
+            box-sizing: border-box;
+            border-bottom: 1px solid #eaeef2;
+            background: #ffffff;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header .title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #0b3d60;
+        }
+
+        .header .user-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .header .user-actions a {
+            color: #1f6feb;
+            text-decoration: none;
+        }
+
+        .layout {
+            display: flex;
+            min-height: calc(100vh - 56px);
+        }
+
+        .sidebar {
+            width: 240px;
+            flex: 0 0 240px;
+            border-right: 1px solid #eaeef2;
+            background: #f7f8fa;
+            padding: 16px 0;
+            box-sizing: border-box;
+        }
+
+        .brand {
+            padding: 0 16px 12px 16px;
+            font-weight: 600;
+            color: #0b3d60;
+        }
+
+        .nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav a {
+            display: block;
+            padding: 10px 16px;
+            color: #24292f;
+            text-decoration: none;
+            border-left: 3px solid transparent;
+        }
+
+        .nav a:hover {
+            background: #eef2f6;
+        }
+
+        .nav a.active {
+            background: #e9f2ff;
+            border-left-color: #1f6feb;
+            color: #0b3d60;
+            font-weight: 600;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .content-empty {
+            color: #8a939e;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+                flex-basis: 200px;
+            }
+        }
+    </style>
 </head>
 <body>
-<h2>Welcome, {{ username }}!</h2>
-<a href="">Logout</a>
+<header class="header">
+    <div class="title">控制台</div>
+    <div class="user-actions">
+        <span>欢迎，{{ username }}！</span>
+        <a href="{% url 'web_logout' %}">退出登录</a>
+    </div>
+    {% comment %} 可在此处扩展全局搜索或通知入口 {% endcomment %}
+</header>
+<div class="layout">
+    <aside class="sidebar" role="navigation" aria-label="侧边导航">
+        <div class="brand">导航</div>
+        <nav>
+            <ul class="nav">
+                <li><a href="#" data-key="nav-1">导航一</a></li>
+                <li><a href="#" data-key="nav-2">导航二</a></li>
+                <li><a href="#" data-key="nav-3">导航三</a></li>
+            </ul>
+        </nav>
+    </aside>
+    <main id="content" class="content" role="main" aria-live="polite" aria-busy="false">
+        <!-- 右侧默认留空 -->
+        <div class="content-empty" id="empty-hint">请选择左侧的一个导航项以查看内容</div>
+    </main>
+</div>
+<script>
+    /**
+     处理侧边导航点击
+
+     :param {MouseEvent} event: 点击事件对象
+     :returns: 无返回值
+     :rtype: void
+     :notes:
+     - 默认不预加载任何内容，右侧区域初始保持空提示
+     - 点击后根据 key 渲染不同内容
+     */
+    function handleNavClick(event) {
+        event.preventDefault();
+        const link = event.currentTarget;
+        const key = link.dataset.key;
+        const allLinks = document.querySelectorAll('.nav a');
+        allLinks.forEach(a => a.classList.remove('active'));
+        link.classList.add('active');
+
+        const content = document.getElementById('content');
+        const emptyHint = document.getElementById('empty-hint');
+        if (emptyHint) {
+            emptyHint.remove();
+        }
+
+        /**
+         渲染右侧内容
+
+         :param {string} itemKey: 导航项标识
+         :returns: 无返回值
+         :rtype: void
+         */
+        function renderContent(itemKey) {
+            let html = '';
+            if (itemKey === 'nav-1') {
+                html = '<h2>导航一</h2><p>这里是导航一对应的内容区域。</p>';
+            } else if (itemKey === 'nav-2') {
+                html = '<h2>导航二</h2><p>这里是导航二对应的内容区域。</p>';
+            } else if (itemKey === 'nav-3') {
+                html = '<h2>导航三</h2><p>这里是导航三对应的内容区域。</p>';
+            } else {
+                html = '<p class="content-empty">未匹配到内容</p>';
+            }
+            content.innerHTML = html;
+        }
+
+        renderContent(key);
+    }
+
+    // 绑定事件（保持右侧默认空，直到点击才渲染）
+    document.querySelectorAll('.nav a').forEach(a => {
+        a.addEventListener('click', handleNavClick, false);
+    });
+</script>
 </body>
 </html>

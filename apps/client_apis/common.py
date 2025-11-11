@@ -14,7 +14,7 @@ from common.utils import get_randem_md5
 logger = logging.getLogger('request_debug_log')
 
 
-def check_login_by_json(func):
+def check_login(func):
     """
     检查用户是否已登录的装饰器
 

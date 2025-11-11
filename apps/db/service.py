@@ -325,6 +325,7 @@ class LoginClientService(BaseService):
             'android': 4,
             'ios': 5,
             'web': 6,
+            'api': 7,
         }
 
     @staticmethod
@@ -394,12 +395,20 @@ class TokenService(BaseService):
     def __init__(self, request: HttpRequest | None = None):
         self.request = request
 
-    def create_token(self, username, uuid, client_type='client'):
-        assert client_type in ['client', 'web', 'api']
+    def create_token(self, username, uuid, client_type=3):
+        """
+        创建令牌
+
+        :param username: 用户名
+        :param uuid: 设备UUID
+        :param client_type: 客户端类型 (1, 'web'), (2, 'client'), (3, 'api')
+        :return: 令牌
+        """
+        assert client_type in [1, 2, 3]
         username = self.get_user_info(username)
         token = f"{get_randem_md5()}_{username}"
 
-        if qs := self.db.objects.filter(username=username, uuid=uuid).first():
+        if qs := self.db.objects.filter(username=username, uuid=uuid, client_type=client_type).first():
             qs.token = token
             qs.created_at = get_local_time()
             qs.last_used_at = get_local_time()
@@ -410,6 +419,7 @@ class TokenService(BaseService):
                 username=self.get_user_info(username),
                 uuid=uuid,
                 token=token,
+                client_type=client_type,
                 created_at=get_local_time(),
                 last_used_at=get_local_time(),
             )
