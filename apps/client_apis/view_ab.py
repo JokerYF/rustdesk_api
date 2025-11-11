@@ -119,15 +119,6 @@ def ab_settings(request):
 @request_debug_log
 @check_login
 def ab_shared_profiles(request):
-    # {
-    #     "total": 0,
-    #     "data": [
-    #         {
-    #             "guid": "1-1001-12",
-    #             "name": "研发部地址簿",
-    #         }
-    #     ]
-    # }
     token_service = TokenService(request=request)
     user_info = token_service.user_info
 
@@ -166,32 +157,6 @@ def ab_peers(request):
     :param request:
     :return:
     """
-    # result = {
-    #     "total": 1,
-    #     "data": [
-    #         {
-    #             # "row_id": 12,
-    #             "id": "488591401",
-    #             "username": "pcuser",
-    #             # "password": "",
-    #             "hostname": "HOST-01",
-    #             "alias": "办公PC",
-    #             "platform": "Windows",
-    #             "tags": ["重要", "外网"],
-    #             # "hash": "",
-    #             # "user_id": 3,
-    #             # "forceAlwaysRelay": False,
-    #             # "rdpPort": "",
-    #             # "rdpUsername": "",
-    #             # "online": True,
-    #             # "loginName": "pcuser",
-    #             # "sameServer": True,
-    #             # "collection_id": 5
-    #         }
-    #     ],
-    #     "licensed_devices": 99999
-    # }
-
     token_service = TokenService(request=request)
     user_info = token_service.user_info
     request_query = token_service.request_query
@@ -243,20 +208,6 @@ def ab_peers(request):
 @request_debug_log
 @check_login
 def ab_peer_add(request, guid):
-    # {
-    #     "id": "163052894",
-    #     "username": "lenovo",
-    #     "hostname": "lenovodemac-mini",
-    #     "platform": "Mac OS",
-    #     "alias": "",
-    #     "tags": [],
-    #     "forceAlwaysRelay": "false",
-    #     "rdpPort": "",
-    #     "rdpUsername": "",
-    #     "loginName": "admin",
-    #     "device_group_name": "",
-    #     "same_server": null
-    # }
     token_service = TokenService(request=request)
     body = token_service.request_body
     try:
