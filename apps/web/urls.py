@@ -12,5 +12,6 @@ urlpatterns = [
     path('device/detail', view_home.device_detail, name='web_device_detail'),
     path('device/update', view_home.update_device, name='web_device_update'),
     path('device/statuses', view_home.device_statuses, name='web_device_statuses'),
-    path('assets/icon/<slug:name>.svg', view_home.icon_svg, name='web_icon_svg'),
+    path('user/update', view_home.update_user, name='web_user_update'),
+    path('user/reset-password', view_home.reset_user_password, name='web_user_reset_password'),
 ]

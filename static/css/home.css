@@ -1,0 +1,213 @@
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: #1f2328;
+    background: #ffffff;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border-bottom: 1px solid #eaeef2;
+    background: #ffffff;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.header .title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #0b3d60;
+}
+
+.header .user-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 14px;
+}
+
+.header .user-actions a {
+    color: #1f6feb;
+    text-decoration: none;
+}
+
+.layout {
+    display: flex;
+    min-height: calc(100vh - 56px);
+}
+
+.sidebar {
+    width: 240px;
+    flex: 0 0 240px;
+    border-right: 1px solid #eaeef2;
+    background: #f7f8fa;
+    padding: 16px 0;
+    box-sizing: border-box;
+}
+
+.brand {
+    padding: 0 16px 12px 16px;
+    font-weight: 600;
+    color: #0b3d60;
+}
+
+.nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav a {
+    display: block;
+    padding: 10px 16px;
+    color: #24292f;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+}
+
+.nav a:hover {
+    background: #eef2f6;
+}
+
+.nav a.active {
+    background: #e9f2ff;
+    border-left-color: #1f6feb;
+    color: #0b3d60;
+    font-weight: 600;
+}
+
+.content {
+    flex: 1;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.content-empty {
+    color: #8a939e;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+        flex-basis: 200px;
+    }
+}
+
+/* 通用弹窗组件（全站复用） */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    width: min(400px, 92vw);
+    background: #ffffff;
+    border: 1px solid #eaeef2;
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+}
+
+.modal--sm {
+    width: min(400px, 92vw);
+}
+
+.modal--md {
+    width: min(640px, 92vw);
+}
+
+.modal--lg {
+    width: min(880px, 92vw);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eaeef2;
+}
+
+.modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #0b3d60;
+    margin: 0;
+}
+
+.modal-body {
+    padding: 10px;
+    min-height: 40px;
+}
+
+.modal-close {
+    appearance: none;
+    border: 1px solid #eaeef2;
+    background: #ffffff;
+    color: #0b3d60;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 14px;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover:not(:disabled) {
+    background: #eef2f6;
+    border-color: #d0d7de;
+}
+
+.modal-close:focus-visible {
+    outline: none;
+    border-color: #1f6feb;
+    box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
+}
+
+/* 行内编辑浮层（不挤压布局） */
+[data-inline-field] {
+    position: relative;
+}
+
+.nav2-inline-pop {
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+    z-index: 2000;
+}
+
+.nav2-inline-pop .nav2-input {
+    width: 220px;
+    max-width: 60vw;
+}
+
+/* 可复用：表格列宽手动调整 */
+ 
+
+

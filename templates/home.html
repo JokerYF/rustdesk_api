@@ -5,190 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Home</title>
     {% load static %}
-    <style>
-        html, body {
-            height: 100%;
-        }
-
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-            color: #1f2328;
-            background: #ffffff;
-        }
-
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 56px;
-            padding: 0 16px;
-            box-sizing: border-box;
-            border-bottom: 1px solid #eaeef2;
-            background: #ffffff;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .header .title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #0b3d60;
-        }
-
-        .header .user-actions {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            font-size: 14px;
-        }
-
-        .header .user-actions a {
-            color: #1f6feb;
-            text-decoration: none;
-        }
-
-        .layout {
-            display: flex;
-            min-height: calc(100vh - 56px);
-        }
-
-        .sidebar {
-            width: 240px;
-            flex: 0 0 240px;
-            border-right: 1px solid #eaeef2;
-            background: #f7f8fa;
-            padding: 16px 0;
-            box-sizing: border-box;
-        }
-
-        .brand {
-            padding: 0 16px 12px 16px;
-            font-weight: 600;
-            color: #0b3d60;
-        }
-
-        .nav {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .nav a {
-            display: block;
-            padding: 10px 16px;
-            color: #24292f;
-            text-decoration: none;
-            border-left: 3px solid transparent;
-        }
-
-        .nav a:hover {
-            background: #eef2f6;
-        }
-
-        .nav a.active {
-            background: #e9f2ff;
-            border-left-color: #1f6feb;
-            color: #0b3d60;
-            font-weight: 600;
-        }
-
-        .content {
-            flex: 1;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .content-empty {
-            color: #8a939e;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 200px;
-                flex-basis: 200px;
-            }
-        }
-
-        /* 通用弹窗组件（全站复用） */
-        .modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.35);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal {
-            width: min(400px, 92vw);
-            background: #ffffff;
-            border: 1px solid #eaeef2;
-            border-radius: 8px;
-            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-        }
-
-        .modal--sm {
-            width: min(400px, 92vw);
-        }
-
-        .modal--md {
-            width: min(640px, 92vw);
-        }
-
-        .modal--lg {
-            width: min(880px, 92vw);
-        }
-
-        .modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 10px;
-            border-bottom: 1px solid #eaeef2;
-        }
-
-        .modal-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #0b3d60;
-            margin: 0;
-        }
-
-        .modal-body {
-            padding: 10px;
-            min-height: 40px;
-        }
-
-        .modal-close {
-            appearance: none;
-            border: 1px solid #eaeef2;
-            background: #ffffff;
-            color: #0b3d60;
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 14px;
-            line-height: 1.2;
-            cursor: pointer;
-            transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-close:hover:not(:disabled) {
-            background: #eef2f6;
-            border-color: #d0d7de;
-        }
-
-        .modal-close:focus-visible {
-            outline: none;
-            border-color: #1f6feb;
-            box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/global.css">
+    <link rel="stylesheet" href="/static/css/home.css">
+    <link rel="stylesheet" href="/static/css/nav1.css">
+    <link rel="stylesheet" href="/static/css/nav2.css">
 </head>
 <body>
 <header class="header">
@@ -227,9 +47,13 @@
     const DEVICE_DETAIL_URL = "{% url 'web_device_detail' %}";
     const DEVICE_UPDATE_URL = "{% url 'web_device_update' %}";
     const DEVICE_STATUSES_URL = "{% url 'web_device_statuses' %}";
-    const ICON_EDIT_URL = "{% url 'web_icon_svg' 'edit' %}";
-    const ICON_CONFIRM_URL = "{% url 'web_icon_svg' 'confirm' %}";
-    const ICON_CANCEL_URL = "{% url 'web_icon_svg' 'cancel' %}";
+    const USER_UPDATE_URL = "{% url 'web_user_update' %}";
+    const USER_RESET_PWD_URL = "{% url 'web_user_reset_password' %}";
+    const ICON_EDIT_URL = "/static/icons/edit.svg";
+    const ICON_CONFIRM_URL = "/static/icons/confirm.svg";
+    const ICON_CANCEL_URL = "/static/icons/cancel.svg";
+
+    
 
     // nav-2 自动刷新控制变量
     let NAV2_TIMER_ID = null;
@@ -551,11 +375,38 @@
      :returns: 无
      :rtype: void
      */
-    function startNav2InlineEdit(ddEl, field, peerId) {
-        const original = ddEl.getAttribute('data-original') || '';
+    function startNav2InlineEdit(containerEl, field, peerId) {
         const placeholder = field === 'alias' ? '请输入设备别名' : '用逗号分隔多个标签';
-        ddEl.innerHTML =
-            '<input type="text" class="nav2-input" style="min-width:200px;" value="' + original + '" ' +
+        const isInlineCell = containerEl.hasAttribute('data-inline-field');
+        const original = containerEl.getAttribute('data-original')
+            || (containerEl.querySelector('.nav2-detail-text')?.textContent || '')
+            || '';
+        const value = original;
+        // 行内：使用绝对定位浮层，不改动原 DOM，避免挤压布局
+        if (isInlineCell) {
+            if (containerEl.querySelector('.nav2-inline-pop')) return;
+            const pop = document.createElement('div');
+            pop.className = 'nav2-inline-pop';
+            pop.innerHTML =
+                '<input type="text" class="nav2-input" value="' + value + '" ' +
+                'data-field="' + field + '" data-peer="' + peerId + '" placeholder="' + placeholder + '" /> ' +
+                '<button type="button" class="nav2-link nav2-edit-confirm" data-field="' + field + '" data-peer="' + peerId + '" aria-label="确认">' +
+                '<img src="' + ICON_CONFIRM_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+                '</button> ' +
+                '<button type="button" class="nav2-link nav2-edit-cancel" data-field="' + field + '" data-peer="' + peerId + '" aria-label="取消">' +
+                '<img src="' + ICON_CANCEL_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+                '</button>';
+            containerEl.appendChild(pop);
+            const input = pop.querySelector('input[type="text"]');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+            return;
+        }
+        // 详情：保持原有替换式编辑
+        containerEl.innerHTML =
+            '<input type="text" class="nav2-input" style="min-width:200px;" value="' + value + '" ' +
             'data-field="' + field + '" data-peer="' + peerId + '" placeholder="' + placeholder + '" /> ' +
             '<button type="button" class="nav2-link nav2-edit-confirm" data-field="' + field + '" data-peer="' + peerId + '" aria-label="确认">' +
             '<img src="' + ICON_CONFIRM_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
@@ -599,8 +450,11 @@
             return resp.json();
         }).then(data => {
             if (!data || data.ok !== true) throw new Error((data && data.error) || '保存失败');
-            // 成功：刷新详情与列表
-            fetchAndShowNav2Detail(peerId);
+            // 成功：若在详情弹窗内，刷新详情；否则仅刷新列表
+            const inModal = !!ddEl.closest('#nav2-modal-root');
+            if (inModal) {
+                fetchAndShowNav2Detail(peerId);
+            }
             const extra = collectNav2QueryOptions(document.getElementById('nav2-search-form'));
             renderContent('nav-2', extra);
             try {
@@ -761,6 +615,189 @@
                 }
             }
         }, false);
+
+        // nav-3: 查询参数收集
+        function collectNav3QueryOptions(formEl) {
+            const params = {};
+            if (!formEl) return params;
+            const formData = new FormData(formEl);
+            const q = formData.get('q');
+            if (q !== null && String(q).trim() !== '') {
+                params.q = String(q).trim();
+            }
+            const pageSize = formData.get('page_size');
+            if (pageSize !== null && String(pageSize).trim() !== '') {
+                params.page_size = String(pageSize).trim();
+            }
+            return params;
+        }
+
+        // 事件委托：处理 nav-3 分页
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav3-page-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const page = btn.dataset.page;
+            const key = btn.dataset.key || 'nav-3';
+            if (page) {
+                const formEl = document.getElementById('nav3-search-form');
+                const extra = collectNav3QueryOptions(formEl);
+                extra.page = page;
+                renderContent(key, extra);
+                try {
+                    localStorage.setItem(STORAGE_KEY, key);
+                } catch (e) {
+                }
+            }
+        }, false);
+        // 事件委托：处理 nav-3 重置
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav3-reset-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const key = 'nav-3';
+            renderContent(key);
+            try {
+                localStorage.setItem(STORAGE_KEY, key);
+            } catch (e) {
+            }
+        }, false);
+        // 事件委托：处理 nav-3 搜索提交
+        contentEl.addEventListener('submit', function (e) {
+            const formEl = e.target;
+            if (!formEl || formEl.id !== 'nav3-search-form') return;
+            e.preventDefault();
+            const key = 'nav-3';
+            const extra = collectNav3QueryOptions(formEl);
+            renderContent(key, extra);
+            try {
+                localStorage.setItem(STORAGE_KEY, key);
+            } catch (e) {
+            }
+        }, false);
+        // 事件委托：nav-3 行级操作（编辑/重置密码）
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav3-row-action');
+            if (!btn) return;
+            e.preventDefault();
+            const action = btn.getAttribute('data-action') || '';
+            const username = btn.getAttribute('data-username') || '';
+            if (!action || !username) return;
+            if (action === 'edit') {
+                const fullname = btn.getAttribute('data-fullname') || '';
+                const email = btn.getAttribute('data-email') || '';
+                const isStaff = btn.getAttribute('data-is_staff') === '1';
+                const uEl = document.getElementById('nav3-edit-username');
+                const fEl = document.getElementById('nav3-edit-fullname');
+                const eEl = document.getElementById('nav3-edit-email');
+                const sEl = document.getElementById('nav3-edit-is-staff');
+                if (uEl) uEl.value = username;
+                if (fEl) fEl.value = fullname;
+                if (eEl) eEl.value = email;
+                if (sEl) sEl.checked = isStaff;
+                openModalById('nav3-edit-root');
+            } else if (action === 'reset_pwd') {
+                const uEl = document.getElementById('nav3-reset-username');
+                const p1 = document.getElementById('nav3-reset-pass1');
+                const p2 = document.getElementById('nav3-reset-pass2');
+                if (uEl) uEl.value = username;
+                if (p1) p1.value = '';
+                if (p2) p2.value = '';
+                openModalById('nav3-reset-root');
+            }
+        }, false);
+        // 提交 nav-3 编辑表单
+        contentEl.addEventListener('submit', function (e) {
+            const formEl = e.target;
+            if (!formEl || formEl.id !== 'nav3-edit-form') return;
+            e.preventDefault();
+            const fd = new FormData(formEl);
+            const username = (fd.get('username') || '').trim();
+            const fullName = (fd.get('full_name') || '').trim();
+            const email = (fd.get('email') || '').trim();
+            const isStaff = formEl.querySelector('#nav3-edit-is-staff')?.checked ? '1' : '0';
+            if (!username) {
+                alert('用户名无效');
+                return;
+            }
+            const csrf = getCookie('csrftoken');
+            const body = new URLSearchParams();
+            body.set('username', username);
+            body.set('full_name', fullName);
+            body.set('email', email);
+            body.set('is_staff', isStaff);
+            fetch(USER_UPDATE_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-CSRFToken': csrf
+                },
+                body: body.toString()
+            }).then(resp => {
+                if (!resp.ok) throw new Error('请求失败');
+                return resp.json();
+            }).then(data => {
+                if (!data || data.ok !== true) throw new Error((data && data.error) || '保存失败');
+                closeModalById('nav3-edit-root');
+                const extra = collectNav3QueryOptions(document.getElementById('nav3-search-form'));
+                renderContent('nav-3', extra);
+                try {
+                    localStorage.setItem(STORAGE_KEY, 'nav-3');
+                } catch (e) {
+                }
+            }).catch(err => {
+                alert(err.message || '保存失败，请稍后重试');
+            });
+        }, false);
+        // 提交 nav-3 重置密码表单
+        contentEl.addEventListener('submit', function (e) {
+            const formEl = e.target;
+            if (!formEl || formEl.id !== 'nav3-reset-form') return;
+            e.preventDefault();
+            const fd = new FormData(formEl);
+            const username = (fd.get('username') || '').trim();
+            const p1 = (fd.get('password1') || '').trim();
+            const p2 = (fd.get('password2') || '').trim();
+            if (!username || !p1 || !p2) {
+                alert('请输入完整信息');
+                return;
+            }
+            if (p1 !== p2) {
+                alert('两次密码不一致');
+                return;
+            }
+            const csrf = getCookie('csrftoken');
+            const body = new URLSearchParams();
+            body.set('username', username);
+            body.set('password1', p1);
+            body.set('password2', p2);
+            fetch(USER_RESET_PWD_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-CSRFToken': csrf
+                },
+                body: body.toString()
+            }).then(resp => {
+                if (!resp.ok) throw new Error('请求失败');
+                return resp.json();
+            }).then(data => {
+                if (!data || data.ok !== true) throw new Error((data && data.error) || '重置失败');
+                closeModalById('nav3-reset-root');
+                const extra = collectNav3QueryOptions(document.getElementById('nav3-search-form'));
+                renderContent('nav-3', extra);
+                try {
+                    localStorage.setItem(STORAGE_KEY, 'nav-3');
+                } catch (e) {
+                }
+            }).catch(err => {
+                alert(err.message || '重置失败，请稍后重试');
+            });
+        }, false);
         // 事件委托：处理 nav-2 重置
         contentEl.addEventListener('click', function (e) {
             const btn = e.target.closest('.nav2-reset-btn');
@@ -810,42 +847,73 @@
                 console.log('nav-2 row action:', action, id);
             }
         }, false);
-        // 事件委托：详情内联编辑（进入编辑态）
+        // 事件委托：详情/行内 内联编辑（进入编辑态）
         contentEl.addEventListener('click', function (e) {
             const editBtn = e.target.closest('.nav2-edit-btn');
             if (!editBtn) return;
             e.preventDefault();
             const field = editBtn.getAttribute('data-field');
             const peer = editBtn.getAttribute('data-peer');
-            const ddEl = document.getElementById('nav2-detail-' + field);
-            if (!ddEl) return;
-            startNav2InlineEdit(ddEl, field, peer);
+            // 优先就近查找带有 data-inline-field 的容器；否则回退详情容器
+            let container = editBtn.closest('[data-inline-field="' + field + '"]') || document.getElementById('nav2-detail-' + field);
+            if (!container) return;
+            // 若未预置 original/peer，则从现有文本与属性补齐
+            if (!container.hasAttribute('data-original')) {
+                const text = (container.querySelector('.nav2-detail-text')?.textContent || '').trim();
+                container.setAttribute('data-original', text);
+            }
+            if (!container.getAttribute('data-peer') && peer) {
+                container.setAttribute('data-peer', peer);
+            }
+            startNav2InlineEdit(container, field, peer);
         }, false);
-        // 事件委托：详情内联编辑（确认）
+        // 事件委托：详情/行内 内联编辑（确认）
         contentEl.addEventListener('click', function (e) {
             const okBtn = e.target.closest('.nav2-edit-confirm');
             if (!okBtn) return;
             e.preventDefault();
             const field = okBtn.getAttribute('data-field');
             const peer = okBtn.getAttribute('data-peer');
-            const ddEl = document.getElementById('nav2-detail-' + field);
-            if (!ddEl) return;
-            submitNav2InlineEdit(ddEl, field, peer);
+            const container = okBtn.closest('[data-inline-field]') || document.getElementById('nav2-detail-' + field);
+            if (!container) return;
+            submitNav2InlineEdit(container, field, peer);
         }, false);
-        // 事件委托：详情内联编辑（取消）
+        // 事件委托：详情/行内 内联编辑（取消）
         contentEl.addEventListener('click', function (e) {
             const cancelBtn = e.target.closest('.nav2-edit-cancel');
             if (!cancelBtn) return;
             e.preventDefault();
             const field = cancelBtn.getAttribute('data-field');
-            const ddEl = document.getElementById('nav2-detail-' + field);
-            if (!ddEl) return;
-            const original = ddEl.getAttribute('data-original') || '';
-            ddEl.innerHTML =
+            const container = cancelBtn.closest('[data-inline-field]') || document.getElementById('nav2-detail-' + field);
+            if (!container) return;
+            const pop = container.querySelector('.nav2-inline-pop');
+            if (pop) {
+                pop.remove();
+                return;
+            }
+            const original = container.getAttribute('data-original') || '';
+            const peerAttr = container.getAttribute('data-peer') || '';
+            container.innerHTML =
                 '<span class="nav2-detail-text">' + (original || '-') + '</span> ' +
-                '<button type="button" class="nav2-link nav2-edit-btn" data-field="' + field + '" data-peer="' + (document.querySelector('#nav2-modal-body dl div:nth-child(1) dd')?.textContent.trim() || '') + '" aria-label="编辑">' +
+                '<button type="button" class="nav2-link nav2-edit-btn" data-field="' + field + '" data-peer="' + peerAttr + '" aria-label="编辑">' +
                 '<img src="' + ICON_EDIT_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
                 '</button>';
+        }, false);
+        // 点击别名文本进入编辑（行内）
+        contentEl.addEventListener('click', function (e) {
+            const textEl = e.target.closest('[data-inline-field="alias"] .nav2-detail-text');
+            if (!textEl) return;
+            const container = textEl.closest('[data-inline-field="alias"]');
+            if (!container) return;
+            // 已处于编辑态则忽略
+            if (container.querySelector('input[type="text"][data-field="alias"]')) return;
+            const peer = container.getAttribute('data-peer') || '';
+            // 补齐 original
+            if (!container.hasAttribute('data-original')) {
+                const text = (textEl.textContent || '').trim();
+                container.setAttribute('data-original', text);
+            }
+            startNav2InlineEdit(container, 'alias', peer);
         }, false);
         // 事件委托：通用弹窗关闭（按钮，data-close="xxx"）
         contentEl.addEventListener('click', function (e) {

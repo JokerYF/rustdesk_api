@@ -1,123 +1,4 @@
-<style>
-    .nav1-stats {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(160px, 220px));
-        gap: 12px;
-        margin-bottom: 16px;
-    }
-
-    .nav1-card {
-        border: 1px solid #eaeef2;
-        border-radius: 8px;
-        padding: 12px 14px;
-        background: #ffffff;
-    }
-
-    .nav1-card-title {
-        font-size: 12px;
-        color: #6a737d;
-        margin-bottom: 6px;
-    }
-
-    .nav1-card-value {
-        font-size: 22px;
-        font-weight: 700;
-        color: #0b3d60;
-        line-height: 1.2;
-    }
-
-    .nav1-section-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #0b3d60;
-        margin: 8px 0 10px 0;
-    }
-
-    .nav1-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        border: 1px solid #eaeef2;
-        border-radius: 8px;
-        overflow: hidden;
-        background: #ffffff;
-    }
-
-    .nav1-table th,
-    .nav1-table td {
-        text-align: left;
-        padding: 10px 12px;
-        font-size: 14px;
-        border-bottom: 1px solid #eaeef2;
-    }
-
-    .nav1-table thead th {
-        background: #f7f8fa;
-        color: #6a737d;
-        font-weight: 600;
-    }
-
-    .nav1-table tbody tr:hover {
-        background: #f9fbff;
-    }
-
-    .nav1-empty {
-        padding: 16px;
-        color: #8a939e;
-        border: 1px dashed #eaeef2;
-        border-radius: 8px;
-        background: #ffffff;
-    }
-
-    @media (max-width: 768px) {
-        .nav1-stats {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .nav1-table th:nth-child(6),
-        .nav1-table td:nth-child(6) {
-            display: none; /* 小屏隐藏创建时间列 */
-        }
-    }
-
-    .nav1-pagination {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 12px;
-    }
-
-    .nav1-page-btn {
-        appearance: none;
-        border: 1px solid #eaeef2;
-        background: #ffffff;
-        color: #0b3d60;
-        border-radius: 6px;
-        padding: 6px 12px;
-        font-size: 14px;
-        line-height: 1.2;
-        cursor: pointer;
-        transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
-    }
-
-    .nav1-page-btn:hover:not(:disabled) {
-        background: #eef2f6;
-        border-color: #d0d7de;
-    }
-
-    .nav1-page-btn:focus-visible {
-        outline: none;
-        border-color: #1f6feb;
-        box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
-    }
-
-    .nav1-page-btn:disabled {
-        background: #f7f8fa;
-        color: #8a939e;
-        cursor: not-allowed;
-        border-color: #eaeef2;
-    }
-</style>
+<!-- 样式由宿主页 head 的静态 CSS 提供 -->
 
 <div class="nav1-section-title">总览</div>
 <div class="nav1-stats">
@@ -134,15 +15,16 @@
 
 <div class="nav1-section-title">设备列表</div>
 {% if devices %}
-    <table class="nav1-table" aria-label="设备列表">
+    <div class="x-scroll-container">
+        <table class="nav1-table resizable-table" aria-label="设备列表" data-table-id="nav1-devices">
         <thead>
         <tr>
-            <th style="width: 64px;">序号</th>
-            <th>设备ID</th>
-            <th>设备名</th>
-            <th>系统</th>
-            <th>版本</th>
-            <th style="width: 200px;">创建时间</th>
+            <th data-col-key="idx" style="width: 64px;">序号</th>
+            <th data-col-key="peer_id">设备ID</th>
+            <th data-col-key="device_name">设备名</th>
+            <th data-col-key="os">系统</th>
+            <th data-col-key="version">版本</th>
+            <th data-col-key="created_at" style="width: 200px;">创建时间</th>
         </tr>
         </thead>
         <tbody>
@@ -157,7 +39,8 @@
             </tr>
         {% endfor %}
         </tbody>
-    </table>
+        </table>
+    </div>
     <div class="nav1-pagination" style="display:flex;align-items:center;gap:10px;margin-top:12px;">
         <button class="nav1-page-btn" data-key="nav-1"
                 {% if page_obj.has_previous %}data-page="{{ page_obj.previous_page_number }}"{% else %}data-page=""

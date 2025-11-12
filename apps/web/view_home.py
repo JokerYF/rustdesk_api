@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
@@ -154,7 +153,35 @@ def nav_content(request: HttpRequest) -> HttpResponse:
             'status': status,
         })
     elif key == 'nav-3':  # 用户管理
-        ...
+        # 分页参数
+        try:
+            page = int(request.GET.get('page', 1))
+        except (TypeError, ValueError):
+            page = 1
+        try:
+            page_size = int(request.GET.get('page_size', 20))
+        except (TypeError, ValueError):
+            page_size = 20
+        # 搜索参数
+        q = (request.GET.get('q') or '').strip()
+        user_qs = User.objects.all().order_by('-date_joined')
+        if q:
+            user_qs = user_qs.filter(
+                Q(username__icontains=q) |
+                Q(email__icontains=q) |
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q)
+            )
+        paginator = Paginator(user_qs, page_size)
+        page_obj = paginator.get_page(page)
+        users = page_obj.object_list
+        context.update({
+            'users': users,
+            'paginator': paginator,
+            'page_obj': page_obj,
+            'page_size': page_size,
+            'q': q,
+        })
     return render(request, template_name, context=context)
 
 
@@ -194,41 +221,6 @@ def rename_alias(request: HttpRequest) -> JsonResponse:
         defaults={'alias': alias_text}
     )
     return JsonResponse({'ok': True})
-
-
-@request_debug_log
-@login_required(login_url='web_login')
-def icon_svg(request: HttpRequest, name: str) -> HttpResponse:
-    """
-    返回受控 SVG 图标源码（非公开静态目录直链）
-
-    :param request: Http 请求对象
-    :type request: HttpRequest
-    :param name: 图标名（不含后缀），仅允许白名单
-    :type name: str
-    :return: 包含 SVG 源码的响应
-    :rtype: HttpResponse
-    :notes:
-        - 仅返回 `static/icons/` 下受控白名单文件，防止遍历访问
-        - Content-Type 设置为 image/svg+xml; charset=utf-8
-        - 可配合反向代理关闭 /static/ 暴露，统一通过本接口获取
-    """
-    # 白名单：仅允许已内置的图标名
-    allowed = {'edit', 'confirm', 'cancel', 'close'}
-    safe_name = (name or '').strip()
-    if safe_name not in allowed:
-        return HttpResponse(status=404)
-    # 读取项目静态目录下的 SVG 文件
-    icon_path = settings.BASE_DIR / 'static' / 'icons' / f'{safe_name}.svg'
-    try:
-        # 明确按 UTF-8 文本读取
-        content = icon_path.read_text(encoding='utf-8')
-    except Exception:
-        return HttpResponse(status=404)
-    resp = HttpResponse(content, content_type='image/svg+xml; charset=utf-8')
-    # 适度缓存（可按需调整或关闭）
-    resp['Cache-Control'] = 'public, max-age=3600'
-    return resp
 
 
 @request_debug_log
@@ -378,8 +370,8 @@ def device_statuses(request: HttpRequest) -> JsonResponse:
     if not peer_ids:
         return JsonResponse({'ok': True, 'data': {}})
     peer_ids = peer_ids[:500]
-    # 5分钟内有心跳视为在线
-    online_threshold = timezone.now() - timedelta(minutes=5)
+    # 60s 内有心跳视为在线
+    online_threshold = timezone.now() - timedelta(seconds=60)
     online_qs = HeartBeat.objects.filter(
         peer_id__in=peer_ids,
         modified_at__gte=online_threshold
@@ -387,3 +379,67 @@ def device_statuses(request: HttpRequest) -> JsonResponse:
     online_set = set(online_qs)
     data = {pid: {'is_online': (pid in online_set)} for pid in peer_ids}
     return JsonResponse({'ok': True, 'data': data})
+
+
+@request_debug_log
+@login_required(login_url='web_login')
+def update_user(request: HttpRequest) -> JsonResponse:
+    """
+    更新用户基础信息（仅限管理员）
+
+    :param request: POST，包含 username, full_name(可选), email(可选), is_staff(可选: '1'/'0')
+    :return: {"ok": true}
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': '无权限'}, status=403)
+    username = (request.POST.get('username') or '').strip()
+    if not username:
+        return JsonResponse({'ok': False, 'error': '参数错误'}, status=400)
+    user = User.objects.filter(username=username).first()
+    if not user:
+        return JsonResponse({'ok': False, 'error': '用户不存在'}, status=404)
+    full_name = (request.POST.get('full_name') or '').strip()
+    email = (request.POST.get('email') or '').strip()
+    is_staff_raw = request.POST.get('is_staff')
+    if full_name != '':
+        # 仅使用 first_name 存储展示用姓名
+        user.first_name = full_name
+        user.last_name = ''
+    if email != '':
+        user.email = email
+    if is_staff_raw is not None:
+        user.is_staff = (str(is_staff_raw).strip() == '1')
+    user.save(update_fields=['first_name', 'last_name', 'email', 'is_staff'])
+    return JsonResponse({'ok': True})
+
+
+@request_debug_log
+@login_required(login_url='web_login')
+def reset_user_password(request: HttpRequest) -> JsonResponse:
+    """
+    重置用户密码（仅限管理员）
+
+    :param request: POST，包含 username, password1, password2
+    :return: {"ok": true}
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': '无权限'}, status=403)
+    username = (request.POST.get('username') or '').strip()
+    password1 = (request.POST.get('password1') or '').strip()
+    password2 = (request.POST.get('password2') or '').strip()
+    if not username or not password1 or not password2:
+        return JsonResponse({'ok': False, 'error': '参数错误'}, status=400)
+    if password1 != password2:
+        return JsonResponse({'ok': False, 'error': '两次密码不一致'}, status=400)
+    if len(password1) < 6:
+        return JsonResponse({'ok': False, 'error': '密码长度至少为6位'}, status=400)
+    user = User.objects.filter(username=username).first()
+    if not user:
+        return JsonResponse({'ok': False, 'error': '用户不存在'}, status=404)
+    user.set_password(password1)
+    user.save(update_fields=['password'])
+    return JsonResponse({'ok': True})

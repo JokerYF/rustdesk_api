@@ -1,212 +1,4 @@
-<style>
-    .nav2-section-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #0b3d60;
-        margin: 8px 0 10px 0;
-    }
-
-    .nav2-toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 12px;
-        flex-wrap: wrap;
-    }
-
-    .nav2-toolbar form {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .nav2-input,
-    .nav2-select {
-        appearance: none;
-        border: 1px solid #eaeef2;
-        background: #ffffff;
-        color: #1f2328;
-        border-radius: 6px;
-        padding: 6px 10px;
-        font-size: 14px;
-        line-height: 1.2;
-        box-sizing: border-box;
-    }
-
-    .nav2-input::placeholder {
-        color: #8a939e;
-    }
-
-    .nav2-btn {
-        appearance: none;
-        border: 1px solid #eaeef2;
-        background: #ffffff;
-        color: #0b3d60;
-        border-radius: 6px;
-        padding: 6px 12px;
-        font-size: 14px;
-        line-height: 1.2;
-        cursor: pointer;
-        transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
-    }
-
-    .nav2-btn:hover:not(:disabled):not(.nav2-primary) {
-        background: #eef2f6;
-        border-color: #d0d7de;
-    }
-
-    .nav2-btn:disabled {
-        background: #f7f8fa;
-        color: #8a939e;
-        cursor: not-allowed;
-        border-color: #eaeef2;
-    }
-
-    .nav2-btn:focus-visible {
-        outline: none;
-        border-color: #1f6feb;
-        box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
-    }
-
-    .nav2-primary {
-        background: #1f6feb;
-        color: #ffffff;
-        border-color: #1f6feb;
-    }
-
-    .nav2-primary:hover {
-        background: #265ecf;
-        border-color: #265ecf;
-        color: #ffffff; /* 保持主按钮 hover 文本可读性 */
-    }
-
-    .nav2-danger {
-        color: #b91c1c;
-    }
-
-    .nav2-toolbar-actions {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-
-    .nav2-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        border: 1px solid #eaeef2;
-        border-radius: 8px;
-        overflow: hidden;
-        background: #ffffff;
-    }
-
-    .nav2-table th,
-    .nav2-table td {
-        text-align: left;
-        padding: 10px 12px;
-        font-size: 14px;
-        border-bottom: 1px solid #eaeef2;
-        vertical-align: middle;
-    }
-
-    .nav2-table thead th {
-        background: #f7f8fa;
-        color: #6a737d;
-        font-weight: 600;
-    }
-
-    .nav2-table tbody tr:hover {
-        background: #f9fbff;
-    }
-
-    .nav2-row-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-
-    .nav2-link {
-        background: none;
-        border: none;
-        color: #1f6feb;
-        cursor: pointer;
-        padding: 0;
-        font-size: 14px;
-    }
-
-    .nav2-link:hover {
-        text-decoration: underline;
-        color: #265ecf; /* 提升对比度，hover 更明显 */
-    }
-
-    .nav2-status {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 12px;
-        line-height: 1.4;
-        border: 1px solid #eaeef2;
-        color: #6a737d;
-        background: #ffffff;
-    }
-
-    .nav2-status.online {
-        color: #065f46;
-        border-color: #a7f3d0;
-        background: #ecfdf5;
-    }
-
-    .nav2-status.offline {
-        color: #6b7280;
-        border-color: #e5e7eb;
-        background: #f9fafb;
-    }
-
-    .nav2-empty {
-        padding: 16px;
-        color: #8a939e;
-        border: 1px dashed #eaeef2;
-        border-radius: 8px;
-        background: #ffffff;
-    }
-
-    .nav2-pagination {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 12px;
-    }
-
-    /* 重命名表单样式 */
-    .nav2-form-row {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-bottom: 8px;
-        flex-wrap: wrap;
-    }
-
-    .nav2-input-full {
-        width: 160px;
-        max-width: 100%;
-    }
-
-    @media (max-width: 768px) {
-        .nav2-table th:nth-child(8),
-        .nav2-table td:nth-child(8) {
-            display: none; /* 小屏隐藏：创建时间 */
-        }
-    }
-
-    @media (max-width: 480px) {
-        .nav2-input-full {
-            width: 100%;
-        }
-    }
-</style>
+<!-- 样式由宿主页 head 的静态 CSS 提供 -->
 {% load static %}
 
 <div class="nav2-section-title">设备管理</div>
@@ -242,20 +34,21 @@
 </div>
 
 {% if devices %}
-    <table class="nav2-table" aria-label="设备列表">
+    <div class="x-scroll-container">
+        <table class="nav2-table" aria-label="设备列表" data-table-id="nav2-devices">
         <thead>
         <tr>
-            <th style="width: 44px;">
+            <th data-col-key="select" style="width: 44px;">
                 <input type="checkbox" id="nav2-select-all" aria-label="全选设备">
             </th>
-            <th>设备ID</th>
-            <th>设备别名</th>
-            <th>设备名</th>
-            <th>设备标签</th>
-            <th>状态</th>
-            <th>版本</th>
-            <th style="width: 200px;">创建时间</th>
-            <th style="width: 240px;">操作</th>
+            <th data-col-key="peer_id">设备ID</th>
+            <th data-col-key="alias">设备别名</th>
+            <th data-col-key="device_name">设备名</th>
+            <th data-col-key="tags">设备标签</th>
+            <th data-col-key="status">状态</th>
+            <th data-col-key="version">版本</th>
+            <th data-col-key="created_at" style="width: 200px;">创建时间</th>
+            <th data-col-key="actions" style="width: 240px;">操作</th>
         </tr>
         </thead>
         <tbody>
@@ -266,15 +59,14 @@
                            aria-label="选择设备 {{ d.peer_id }}">
                 </td>
                 <td>{{ d.peer_id }}</td>
-                <td>
-                    <span>{{ d.alias|default:'-' }}</span>
+                <td data-inline-field="alias" data-peer="{{ d.peer_id }}" data-original="{{ d.alias|default:'' }}">
+                    <span class="nav2-detail-text">{{ d.alias|default:'-' }}</span>
                     <button type="button"
-                            class="nav2-link nav2-row-action"
-                            data-action="rename"
-                            data-id="{{ d.peer_id }}"
-                            data-alias="{{ d.alias|default:'' }}"
+                            class="nav2-link nav2-edit-btn"
+                            data-field="alias"
+                            data-peer="{{ d.peer_id }}"
                             aria-label="编辑别名">
-                        <img src="{% url 'web_icon_svg' 'edit' %}" width="16" height="16" alt="" aria-hidden="true">
+                        <img src="/static/icons/edit.svg" width="16" height="16" alt="" aria-hidden="true">
                     </button>
                 </td>
                 <td>{{ d.device_name }}</td>
@@ -293,9 +85,7 @@
                         <button type="button" class="nav2-link nav2-row-action" data-action="view"
                                 data-id="{{ d.peer_id }}">详情
                         </button>
-                        <button type="button" class="nav2-link nav2-row-action" data-action="rename"
-                                data-id="{{ d.peer_id }}" data-alias="{{ d.alias|default:'' }}">重命名
-                        </button>
+                        {# 移除“重命名”按钮，改为单元格内联编辑 #}
                         <button type="button" class="nav2-link nav2-row-action" data-action="add_to_book"
                                 data-id="{{ d.peer_id }}">添加到地址簿
                         </button>
@@ -304,7 +94,8 @@
             </tr>
         {% endfor %}
         </tbody>
-    </table>
+        </table>
+    </div>
     <div class="nav2-pagination">
         <button class="nav2-btn nav2-page-btn" data-key="nav-2"
                 {% if page_obj.has_previous %}data-page="{{ page_obj.previous_page_number }}"{% else %}data-page=""
@@ -333,7 +124,7 @@
         <div class="modal-header">
             <h3 id="nav2-modal-title" class="modal-title">设备详情</h3>
             <button type="button" class="modal-close" data-close="nav2-modal" aria-label="关闭">
-                <img src="{% url 'web_icon_svg' 'close' %}" width="16" height="16" alt="" aria-hidden="true">
+                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
         <div class="modal-body" id="nav2-modal-body">
@@ -349,7 +140,7 @@
         <div class="modal-header">
             <h3 id="nav2-rename-title" class="modal-title">重命名设备</h3>
             <button type="button" class="modal-close" data-close="nav2-rename" aria-label="关闭">
-                <img src="{% url 'web_icon_svg' 'close' %}" width="16" height="16" alt="" aria-hidden="true">
+                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
         <div class="modal-body">
