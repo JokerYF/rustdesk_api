@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Home</title>
+    {% load static %}
+    <link rel="stylesheet" href="/static/css/global.css">
+    <link rel="stylesheet" href="/static/css/home.css">
+    <link rel="stylesheet" href="/static/css/nav1.css">
+    <link rel="stylesheet" href="/static/css/nav2.css">
+</head>
+<body>
+<header class="header">
+    <div class="title">控制台</div>
+    <div class="user-actions">
+        <span>欢迎，{{ username }}！</span>
+        <a href="{% url 'web_logout' %}">退出登录</a>
+    </div>
+    {% comment %} 可在此处扩展全局搜索或通知入口 {% endcomment %}
+</header>
+<div class="layout">
+    <aside class="sidebar" role="navigation" aria-label="侧边导航">
+        <div class="brand">导航</div>
+        <nav>
+            <ul class="nav">
+                <li><a href="#" data-key="nav-1">首页</a></li>
+                <li><a href="#" data-key="nav-2">设备管理</a></li>
+                <li><a href="#" data-key="nav-3">用户管理</a></li>
+            </ul>
+        </nav>
+    </aside>
+    <main id="content" class="content" role="main" aria-live="polite" aria-busy="false">
+        <!-- 右侧默认留空 -->
+        <div class="content-empty" id="empty-hint">请选择左侧的一个导航项以查看内容</div>
+    </main>
+</div>
+<script>
+    /**
+     本地存储键名常量
+
+     :const STORAGE_KEY: 在本地存储中保存选中导航键名的键
+     */
+    const STORAGE_KEY = 'homeActiveNavKey';
+    const NAV_CONTENT_URL = "{% url 'web_nav_content' %}";
+    const RENAME_ALIAS_URL = "{% url 'web_rename_alias' %}";
+    const DEVICE_DETAIL_URL = "{% url 'web_device_detail' %}";
+    const DEVICE_UPDATE_URL = "{% url 'web_device_update' %}";
+    const DEVICE_STATUSES_URL = "{% url 'web_device_statuses' %}";
+    const USER_UPDATE_URL = "{% url 'web_user_update' %}";
+    const USER_RESET_PWD_URL = "{% url 'web_user_reset_password' %}";
+    const ICON_EDIT_URL = "/static/icons/edit.svg";
+    const ICON_CONFIRM_URL = "/static/icons/confirm.svg";
+    const ICON_CANCEL_URL = "/static/icons/cancel.svg";
+
+    
+
+    // nav-2 自动刷新控制变量
+    let NAV2_TIMER_ID = null;
+    let NAV2_RUNNING = false;
+    let NAV2_INFLIGHT_CONTROLLER = null;
+    let NAV2_FAILURES = 0;
+    const NAV2_BASE_INTERVAL = 10000;   // 10s
+    const NAV2_MAX_INTERVAL = 60000;    // 60s
+
+    /**
+     收集 nav-2 当前页设备ID列表
+
+     :returns: 设备ID数组（顺序与当前表格一致）
+     :rtype: Array<string>
+     */
+    function collectNav2PeerIdsFromDOM() {
+        const rows = document.querySelectorAll('.nav2-table tbody tr[data-peer-id]');
+        const ids = [];
+        rows.forEach(tr => {
+            const pid = tr.getAttribute('data-peer-id') || '';
+            if (pid) ids.push(pid);
+        });
+        return ids;
+    }
+
+    /**
+     将状态应用到 nav-2 DOM
+
+     :param {Object} statusMap: 状态映射，形如 { "<peer_id>": {is_online: true/false}, ... }
+     :returns: 无
+     :rtype: void
+     */
+    function applyNav2Statuses(statusMap) {
+        if (!statusMap) return;
+        Object.keys(statusMap).forEach(pid => {
+            const el = document.querySelector(`.nav2-status[data-status-for="${pid}"]`);
+            if (!el) return;
+            const isOnline = !!(statusMap[pid] && statusMap[pid].is_online);
+            el.classList.toggle('online', isOnline);
+            el.classList.toggle('offline', !isOnline);
+            el.textContent = isOnline ? '在线' : '离线';
+        });
+    }
+
+    /**
+     拉取并刷新 nav-2 状态
+
+     :returns: 无
+     :rtype: void
+     :notes:
+     - 使用 ``X-Session-No-Renew: 1`` 保证请求不刷新会话过期时间
+     */
+    function refreshNav2StatusesOnce() {
+        const ids = collectNav2PeerIdsFromDOM();
+        if (!ids.length) return Promise.resolve();
+        const params = new URLSearchParams({ids: ids.join(',')});
+        // 取消上一请求（若仍在进行中）
+        try {
+            if (NAV2_INFLIGHT_CONTROLLER) NAV2_INFLIGHT_CONTROLLER.abort();
+        } catch (e) {
+        }
+        NAV2_INFLIGHT_CONTROLLER = new AbortController();
+        return fetch(`${DEVICE_STATUSES_URL}?${params.toString()}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-Session-No-Renew': '1'
+            },
+            signal: NAV2_INFLIGHT_CONTROLLER.signal
+        }).then(resp => {
+            if (!resp.ok) throw new Error('请求失败');
+            return resp.json();
+        }).then(data => {
+            if (!data || data.ok !== true) return;
+            applyNav2Statuses(data.data || {});
+        }).catch(() => {
+            // 静默失败：不打断用户操作
+        }).finally(() => {
+            NAV2_INFLIGHT_CONTROLLER = null;
+        });
+    }
+
+    /**
+     计算下一次轮询的延迟（指数退避）
+
+     :returns: 毫秒数
+     :rtype: number
+     */
+    function nav2ComputeDelay() {
+        const backoff = NAV2_BASE_INTERVAL * Math.pow(2, Math.max(0, Math.min(6, NAV2_FAILURES)));
+        return Math.min(backoff, NAV2_MAX_INTERVAL);
+    }
+
+    /**
+     nav-2 轮询主循环（根据可见性与失败次数动态调度）
+
+     :returns: 无
+     :rtype: void
+     */
+    function nav2Tick() {
+        if (!NAV2_RUNNING) return;
+        // 页面不可见时不拉取，等待恢复可见时再触发
+        if (document.hidden) {
+            NAV2_TIMER_ID = null;
+            return;
+        }
+        refreshNav2StatusesOnce().then(() => {
+            NAV2_FAILURES = 0;
+        }).catch(() => {
+            NAV2_FAILURES += 1;
+        }).finally(() => {
+            if (!NAV2_RUNNING) return;
+            const delay = nav2ComputeDelay();
+            NAV2_TIMER_ID = setTimeout(nav2Tick, delay);
+        });
+    }
+
+    /**
+     启动/停止 nav-2 状态自动刷新
+
+     :param {boolean} enable: 是否启用
+     :returns: 无
+     :rtype: void
+     */
+    function toggleNav2AutoRefresh(enable) {
+        NAV2_RUNNING = !!enable;
+        if (NAV2_TIMER_ID) {
+            clearTimeout(NAV2_TIMER_ID);
+            NAV2_TIMER_ID = null;
+        }
+        try {
+            if (NAV2_INFLIGHT_CONTROLLER) NAV2_INFLIGHT_CONTROLLER.abort();
+        } catch (e) {
+        }
+        NAV2_INFLIGHT_CONTROLLER = null;
+        NAV2_FAILURES = 0;
+        if (NAV2_RUNNING) {
+            // 立即进入主循环
+            nav2Tick();
+        }
+    }
+
+    /**
+     渲染右侧内容
+
+     :param {string} itemKey: 导航项标识
+     :returns: 无返回值
+     :rtype: void
+     */
+    function renderContent(itemKey, options = {}) {
+        /**
+         通过 GET 请求拉取模板并渲染
+
+         :param {string} itemKey: 导航项标识
+         :param {Object} options: 额外查询参数，如 {page, page_size}
+         :returns: 无返回值
+         :rtype: void
+         :notes:
+         - 后端路由见 web_nav_content
+         - 使用 same-origin 以携带会话 Cookie
+         */
+        const content = document.getElementById('content');
+        const emptyHint = document.getElementById('empty-hint');
+        if (emptyHint) {
+            emptyHint.remove();
+        }
+        content.setAttribute('aria-busy', 'true');
+        const params = new URLSearchParams({key: itemKey});
+        Object.entries(options || {}).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && String(v).trim() !== '') {
+                params.append(k, v);
+            }
+        });
+        fetch(`${NAV_CONTENT_URL}?${params.toString()}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(resp => {
+            if (!resp.ok) {
+                throw new Error(`HTTP ${resp.status}`);
+            }
+            return resp.text();
+        }).then(html => {
+            content.innerHTML = html;
+            // 切换/加载后，根据导航项决定是否开启 nav-2 自动刷新
+            toggleNav2AutoRefresh(itemKey === 'nav-2');
+        }).catch(() => {
+            content.innerHTML = '<p class="content-empty">加载失败，请稍后重试</p>';
+        }).finally(() => {
+            content.setAttribute('aria-busy', 'false');
+        });
+    }
+
+    /**
+     收集 nav-2 查询参数（从搜索表单）
+
+     :param {HTMLFormElement} formEl: 表单元素（#nav2-search-form）
+     :returns: 查询参数对象，如 {q, os, status}
+     :rtype: Object
+     */
+    function collectNav2QueryOptions(formEl) {
+        const params = {};
+        if (!formEl) return params;
+        const formData = new FormData(formEl);
+        ['q', 'os', 'status', 'page_size'].forEach((k) => {
+            const v = formData.get(k);
+            if (v !== null && String(v).trim() !== '') {
+                params[k] = String(v).trim();
+            }
+        });
+        return params;
+    }
+
+    /**
+     从 Cookie 中获取指定键的值
+
+     :param {string} name: Cookie 名称
+     :returns: Cookie 值或空字符串
+     :rtype: string
+     */
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+
+    /**
+     预填 nav-2 重命名表单
+
+     :param {string} peerId: 设备ID
+     :param {string} currentAlias: 当前别名（可空）
+     :returns: 无
+     :rtype: void
+     */
+    function prefillNav2RenameForm(peerId, currentAlias = '') {
+        const peerInput = document.getElementById('nav2-rename-peer');
+        const aliasInput = document.getElementById('nav2-rename-alias');
+        if (peerInput) peerInput.value = peerId || '';
+        if (aliasInput) {
+            aliasInput.value = currentAlias || '';
+            aliasInput.focus();
+            aliasInput.select();
+        }
+    }
+
+    /**
+     渲染 nav-2 详情内容 HTML
+
+     :param {Object} detail: 设备详情对象
+     :returns: HTML 字符串
+     :rtype: string
+     */
+    function renderNav2DetailHTML(detail) {
+        const tags = Array.isArray(detail.tags) ? detail.tags.join(', ') : (detail.tags || '');
+        return (
+            '<dl style="margin:0;">' +
+            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">设备ID</dt><dd style="margin:0;flex:1;">' + (detail.peer_id || '-') + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">用户名</dt><dd style="margin:0;flex:1;">' + (detail.username || '-') + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">主机名</dt><dd style="margin:0;flex:1;">' + (detail.hostname || '-') + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">设备别名</dt>' +
+            '<dd id="nav2-detail-alias" style="margin:0;flex:1;" data-original="' + (detail.alias || '') + '">' +
+            '<span class="nav2-detail-text">' + (detail.alias || '-') + '</span> ' +
+            '<button type="button" class="nav2-link nav2-edit-btn" data-field="alias" data-peer="' + (detail.peer_id || '') + '" aria-label="编辑别名">' +
+            '<img src="' + ICON_EDIT_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+            '</button>' +
+            '</dd>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">设备标签</dt>' +
+            '<dd id="nav2-detail-tags" style="margin:0;flex:1;" data-original="' + (tags || '') + '">' +
+            '<span class="nav2-detail-text">' + (tags || '-') + '</span> ' +
+            '<button type="button" class="nav2-link nav2-edit-btn" data-field="tags" data-peer="' + (detail.peer_id || '') + '" aria-label="编辑标签">' +
+            '<img src="' + ICON_EDIT_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+            '</button>' +
+            '</dd>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">平台</dt><dd style="margin:0;flex:1;">' + (detail.platform || '-') + '</dd></div>' +
+            '</dl>'
+        );
+    }
+
+    /**
+     获取并展示 nav-2 设备详情
+
+     :param {string} peerId: 设备ID
+     :returns: 无
+     :rtype: void
+     */
+    function fetchAndShowNav2Detail(peerId) {
+        const bodyEl = document.getElementById('nav2-modal-body');
+        if (bodyEl) bodyEl.innerHTML = '<div style="color:#6a737d;">加载中...</div>';
+        openModalById('nav2-modal-root');
+        const params = new URLSearchParams({peer_id: peerId});
+        fetch(`${DEVICE_DETAIL_URL}?${params.toString()}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        }).then(resp => {
+            if (!resp.ok) throw new Error('请求失败');
+            return resp.json();
+        }).then(data => {
+            if (!data || data.ok !== true) throw new Error((data && data.error) || '加载失败');
+            const html = renderNav2DetailHTML(data.data || {});
+            if (bodyEl) bodyEl.innerHTML = html;
+        }).catch(err => {
+            if (bodyEl) bodyEl.innerHTML = '<div style="color:#b91c1c;">' + (err.message || '加载失败') + '</div>';
+        });
+    }
+
+    /**
+     启动内联编辑（别名/标签）
+
+     :param {HTMLElement} ddEl: 详情 dd 容器
+     :param {string} field: 字段名（alias|tags）
+     :param {string} peerId: 设备ID
+     :returns: 无
+     :rtype: void
+     */
+    function startNav2InlineEdit(containerEl, field, peerId) {
+        const placeholder = field === 'alias' ? '请输入设备别名' : '用逗号分隔多个标签';
+        const isInlineCell = containerEl.hasAttribute('data-inline-field');
+        const original = containerEl.getAttribute('data-original')
+            || (containerEl.querySelector('.nav2-detail-text')?.textContent || '')
+            || '';
+        const value = original;
+        // 行内：使用绝对定位浮层，不改动原 DOM，避免挤压布局
+        if (isInlineCell) {
+            if (containerEl.querySelector('.nav2-inline-pop')) return;
+            const pop = document.createElement('div');
+            pop.className = 'nav2-inline-pop';
+            pop.innerHTML =
+                '<input type="text" class="nav2-input" value="' + value + '" ' +
+                'data-field="' + field + '" data-peer="' + peerId + '" placeholder="' + placeholder + '" /> ' +
+                '<button type="button" class="nav2-link nav2-edit-confirm" data-field="' + field + '" data-peer="' + peerId + '" aria-label="确认">' +
+                '<img src="' + ICON_CONFIRM_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+                '</button> ' +
+                '<button type="button" class="nav2-link nav2-edit-cancel" data-field="' + field + '" data-peer="' + peerId + '" aria-label="取消">' +
+                '<img src="' + ICON_CANCEL_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+                '</button>';
+            containerEl.appendChild(pop);
+            const input = pop.querySelector('input[type="text"]');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+            return;
+        }
+        // 详情：保持原有替换式编辑
+        containerEl.innerHTML =
+            '<input type="text" class="nav2-input" style="min-width:200px;" value="' + value + '" ' +
+            'data-field="' + field + '" data-peer="' + peerId + '" placeholder="' + placeholder + '" /> ' +
+            '<button type="button" class="nav2-link nav2-edit-confirm" data-field="' + field + '" data-peer="' + peerId + '" aria-label="确认">' +
+            '<img src="' + ICON_CONFIRM_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+            '</button> ' +
+            '<button type="button" class="nav2-link nav2-edit-cancel" data-field="' + field + '" data-peer="' + peerId + '" aria-label="取消">' +
+            '<img src="' + ICON_CANCEL_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+            '</button>';
+    }
+
+    /**
+     提交内联编辑到后端
+
+     :param {HTMLElement} ddEl: 详情 dd 容器
+     :param {string} field: 字段名（alias|tags）
+     :param {string} peerId: 设备ID
+     :returns: 无
+     :rtype: void
+     */
+    function submitNav2InlineEdit(ddEl, field, peerId) {
+        const input = ddEl.querySelector('input[type="text"][data-field="' + field + '"]');
+        const value = input ? input.value.trim() : '';
+        const csrf = getCookie('csrftoken');
+        const body = new URLSearchParams();
+        body.set('peer_id', peerId);
+        if (field === 'alias') {
+            body.set('alias', value);
+        } else if (field === 'tags') {
+            body.set('tags', value);
+        }
+        fetch(DEVICE_UPDATE_URL, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-CSRFToken': csrf
+            },
+            body: body.toString()
+        }).then(resp => {
+            if (!resp.ok) throw new Error('请求失败');
+            return resp.json();
+        }).then(data => {
+            if (!data || data.ok !== true) throw new Error((data && data.error) || '保存失败');
+            // 成功：若在详情弹窗内，刷新详情；否则仅刷新列表
+            const inModal = !!ddEl.closest('#nav2-modal-root');
+            if (inModal) {
+                fetchAndShowNav2Detail(peerId);
+            }
+            const extra = collectNav2QueryOptions(document.getElementById('nav2-search-form'));
+            renderContent('nav-2', extra);
+            try {
+                localStorage.setItem(STORAGE_KEY, 'nav-2');
+            } catch (e) {
+            }
+        }).catch(err => {
+            alert(err.message || '保存失败，请稍后重试');
+        });
+    }
+
+    /**
+     打开通用弹窗
+
+     :param {string} rootId: 弹窗根节点 ID（如 'nav2-modal-root'）
+     :returns: 无
+     :rtype: void
+     */
+    function openModalById(rootId) {
+        const root = document.getElementById(rootId);
+        if (!root) return;
+        root.style.display = 'flex';
+        root.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     关闭通用弹窗
+
+     :param {string} rootId: 弹窗根节点 ID（如 'nav2-modal-root'）
+     :returns: 无
+     :rtype: void
+     */
+    function closeModalById(rootId) {
+        const root = document.getElementById(rootId);
+        if (!root) return;
+        root.style.display = 'none';
+        root.setAttribute('aria-hidden', 'true');
+    }
+
+    /**
+     关闭所有可见弹窗
+
+     :returns: 无
+     :rtype: void
+     */
+    function closeAllModals() {
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+            if (backdrop.style.display === 'flex' || backdrop.getAttribute('aria-hidden') === 'false') {
+                backdrop.style.display = 'none';
+                backdrop.setAttribute('aria-hidden', 'true');
+            }
+        });
+    }
+
+    /**
+     根据 key 高亮侧边导航链接
+
+     :param {string} itemKey: 导航项标识
+     :returns: 被激活的链接元素（如存在）
+     :rtype: HTMLAnchorElement|null
+     */
+    function activateLinkByKey(itemKey) {
+        const allLinks = document.querySelectorAll('.nav a');
+        allLinks.forEach(a => a.classList.remove('active'));
+        const target = document.querySelector(`.nav a[data-key="${itemKey}"]`);
+        if (target) {
+            target.classList.add('active');
+        }
+        return target;
+    }
+
+    /**
+     处理侧边导航点击
+
+     :param {MouseEvent} event: 点击事件对象
+     :returns: 无返回值
+     :rtype: void
+     :notes:
+     - 默认不预加载任何内容，右侧区域初始保持空提示
+     - 点击后根据 key 渲染不同内容
+     */
+    function handleNavClick(event) {
+        event.preventDefault();
+        const link = event.currentTarget;
+        const key = link.dataset.key;
+        activateLinkByKey(key);
+        renderContent(key);
+        try {
+            localStorage.setItem(STORAGE_KEY, key);
+        } catch (e) {
+            // 忽略无痕/禁用存储导致的异常
+        }
+    }
+
+    /**
+     初始化默认视图（进入页面时默认定位到上次选择或第一个项）
+
+     :returns: 无返回值
+     :rtype: void
+     :notes:
+     - 优先读取本地存储的上次选择
+     - 如无存储则默认选中列表中的第一个项
+     */
+    function initializeDefaultView() {
+        let keyFromStorage = null;
+        try {
+            keyFromStorage = localStorage.getItem(STORAGE_KEY);
+        } catch (e) {
+            keyFromStorage = null;
+        }
+        // 优先使用存储的 key，否则取第一个链接的 key，否则回退 'nav-1'
+        let defaultKey = keyFromStorage;
+        if (!defaultKey) {
+            const firstLink = document.querySelector('.nav a');
+            defaultKey = firstLink ? firstLink.dataset.key : 'nav-1';
+        }
+        activateLinkByKey(defaultKey);
+        renderContent(defaultKey);
+    }
+
+    // 绑定事件与初始化默认视图（页面加载完成）
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.nav a').forEach(a => {
+            a.addEventListener('click', handleNavClick, false);
+        });
+        initializeDefaultView();
+        // 事件委托：处理内容区域的分页按钮点击（nav-1 等）
+        const contentEl = document.getElementById('content');
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav1-page-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const page = btn.dataset.page;
+            const key = btn.dataset.key || 'nav-1';
+            if (page) {
+                renderContent(key, {page});
+                try {
+                    localStorage.setItem(STORAGE_KEY, key);
+                } catch (e) {
+                }
+            }
+        }, false);
+        // 事件委托：处理 nav-2 分页
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav2-page-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const page = btn.dataset.page;
+            const key = btn.dataset.key || 'nav-2';
+            if (page) {
+                const formEl = document.getElementById('nav2-search-form');
+                const extra = collectNav2QueryOptions(formEl);
+                extra.page = page;
+                renderContent(key, extra);
+                try {
+                    localStorage.setItem(STORAGE_KEY, key);
+                } catch (e) {
+                }
+            }
+        }, false);
+
+        // nav-3: 查询参数收集
+        function collectNav3QueryOptions(formEl) {
+            const params = {};
+            if (!formEl) return params;
+            const formData = new FormData(formEl);
+            const q = formData.get('q');
+            if (q !== null && String(q).trim() !== '') {
+                params.q = String(q).trim();
+            }
+            const pageSize = formData.get('page_size');
+            if (pageSize !== null && String(pageSize).trim() !== '') {
+                params.page_size = String(pageSize).trim();
+            }
+            return params;
+        }
+
+        // 事件委托：处理 nav-3 分页
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav3-page-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const page = btn.dataset.page;
+            const key = btn.dataset.key || 'nav-3';
+            if (page) {
+                const formEl = document.getElementById('nav3-search-form');
+                const extra = collectNav3QueryOptions(formEl);
+                extra.page = page;
+                renderContent(key, extra);
+                try {
+                    localStorage.setItem(STORAGE_KEY, key);
+                } catch (e) {
+                }
+            }
+        }, false);
+        // 事件委托：处理 nav-3 重置
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav3-reset-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const key = 'nav-3';
+            renderContent(key);
+            try {
+                localStorage.setItem(STORAGE_KEY, key);
+            } catch (e) {
+            }
+        }, false);
+        // 事件委托：处理 nav-3 搜索提交
+        contentEl.addEventListener('submit', function (e) {
+            const formEl = e.target;
+            if (!formEl || formEl.id !== 'nav3-search-form') return;
+            e.preventDefault();
+            const key = 'nav-3';
+            const extra = collectNav3QueryOptions(formEl);
+            renderContent(key, extra);
+            try {
+                localStorage.setItem(STORAGE_KEY, key);
+            } catch (e) {
+            }
+        }, false);
+        // 事件委托：nav-3 行级操作（编辑/重置密码）
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav3-row-action');
+            if (!btn) return;
+            e.preventDefault();
+            const action = btn.getAttribute('data-action') || '';
+            const username = btn.getAttribute('data-username') || '';
+            if (!action || !username) return;
+            if (action === 'edit') {
+                const fullname = btn.getAttribute('data-fullname') || '';
+                const email = btn.getAttribute('data-email') || '';
+                const isStaff = btn.getAttribute('data-is_staff') === '1';
+                const uEl = document.getElementById('nav3-edit-username');
+                const fEl = document.getElementById('nav3-edit-fullname');
+                const eEl = document.getElementById('nav3-edit-email');
+                const sEl = document.getElementById('nav3-edit-is-staff');
+                if (uEl) uEl.value = username;
+                if (fEl) fEl.value = fullname;
+                if (eEl) eEl.value = email;
+                if (sEl) sEl.checked = isStaff;
+                openModalById('nav3-edit-root');
+            } else if (action === 'reset_pwd') {
+                const uEl = document.getElementById('nav3-reset-username');
+                const p1 = document.getElementById('nav3-reset-pass1');
+                const p2 = document.getElementById('nav3-reset-pass2');
+                if (uEl) uEl.value = username;
+                if (p1) p1.value = '';
+                if (p2) p2.value = '';
+                openModalById('nav3-reset-root');
+            }
+        }, false);
+        // 提交 nav-3 编辑表单
+        contentEl.addEventListener('submit', function (e) {
+            const formEl = e.target;
+            if (!formEl || formEl.id !== 'nav3-edit-form') return;
+            e.preventDefault();
+            const fd = new FormData(formEl);
+            const username = (fd.get('username') || '').trim();
+            const fullName = (fd.get('full_name') || '').trim();
+            const email = (fd.get('email') || '').trim();
+            const isStaff = formEl.querySelector('#nav3-edit-is-staff')?.checked ? '1' : '0';
+            if (!username) {
+                alert('用户名无效');
+                return;
+            }
+            const csrf = getCookie('csrftoken');
+            const body = new URLSearchParams();
+            body.set('username', username);
+            body.set('full_name', fullName);
+            body.set('email', email);
+            body.set('is_staff', isStaff);
+            fetch(USER_UPDATE_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-CSRFToken': csrf
+                },
+                body: body.toString()
+            }).then(resp => {
+                if (!resp.ok) throw new Error('请求失败');
+                return resp.json();
+            }).then(data => {
+                if (!data || data.ok !== true) throw new Error((data && data.error) || '保存失败');
+                closeModalById('nav3-edit-root');
+                const extra = collectNav3QueryOptions(document.getElementById('nav3-search-form'));
+                renderContent('nav-3', extra);
+                try {
+                    localStorage.setItem(STORAGE_KEY, 'nav-3');
+                } catch (e) {
+                }
+            }).catch(err => {
+                alert(err.message || '保存失败，请稍后重试');
+            });
+        }, false);
+        // 提交 nav-3 重置密码表单
+        contentEl.addEventListener('submit', function (e) {
+            const formEl = e.target;
+            if (!formEl || formEl.id !== 'nav3-reset-form') return;
+            e.preventDefault();
+            const fd = new FormData(formEl);
+            const username = (fd.get('username') || '').trim();
+            const p1 = (fd.get('password1') || '').trim();
+            const p2 = (fd.get('password2') || '').trim();
+            if (!username || !p1 || !p2) {
+                alert('请输入完整信息');
+                return;
+            }
+            if (p1 !== p2) {
+                alert('两次密码不一致');
+                return;
+            }
+            const csrf = getCookie('csrftoken');
+            const body = new URLSearchParams();
+            body.set('username', username);
+            body.set('password1', p1);
+            body.set('password2', p2);
+            fetch(USER_RESET_PWD_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-CSRFToken': csrf
+                },
+                body: body.toString()
+            }).then(resp => {
+                if (!resp.ok) throw new Error('请求失败');
+                return resp.json();
+            }).then(data => {
+                if (!data || data.ok !== true) throw new Error((data && data.error) || '重置失败');
+                closeModalById('nav3-reset-root');
+                const extra = collectNav3QueryOptions(document.getElementById('nav3-search-form'));
+                renderContent('nav-3', extra);
+                try {
+                    localStorage.setItem(STORAGE_KEY, 'nav-3');
+                } catch (e) {
+                }
+            }).catch(err => {
+                alert(err.message || '重置失败，请稍后重试');
+            });
+        }, false);
+        // 事件委托：处理 nav-2 重置
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav2-reset-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const key = 'nav-2';
+            renderContent(key);
+            try {
+                localStorage.setItem(STORAGE_KEY, key);
+            } catch (e) {
+            }
+        }, false);
+        // 事件委托：处理 nav-2 全选
+        contentEl.addEventListener('change', function (e) {
+            const target = e.target;
+            if (target && target.id === 'nav2-select-all') {
+                const check = !!target.checked;
+                document.querySelectorAll('.nav2-row-checkbox').forEach(cb => {
+                    cb.checked = check;
+                });
+            }
+        }, false);
+        // 事件委托：处理 nav-2 批量操作（仅占位，无后端调用）
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav2-bulk-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const action = btn.dataset.action || '';
+            const selected = Array.from(document.querySelectorAll('.nav2-row-checkbox:checked')).map(cb => cb.value);
+            // 仅前端占位：可在此处对接后端后执行操作
+            console.log('nav-2 bulk action:', action, selected);
+        }, false);
+        // 事件委托：处理 nav-2 行级操作（仅占位，无后端调用）
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav2-row-action');
+            if (!btn) return;
+            e.preventDefault();
+            const action = btn.dataset.action || '';
+            const id = btn.dataset.id || '';
+            if (action === 'view') {
+                fetchAndShowNav2Detail(id);
+            } else if (action === 'rename') {
+                const currentAlias = btn.dataset.alias || '';
+                prefillNav2RenameForm(id, currentAlias);
+                openModalById('nav2-rename-root');
+            } else {
+                console.log('nav-2 row action:', action, id);
+            }
+        }, false);
+        // 事件委托：详情/行内 内联编辑（进入编辑态）
+        contentEl.addEventListener('click', function (e) {
+            const editBtn = e.target.closest('.nav2-edit-btn');
+            if (!editBtn) return;
+            e.preventDefault();
+            const field = editBtn.getAttribute('data-field');
+            const peer = editBtn.getAttribute('data-peer');
+            // 优先就近查找带有 data-inline-field 的容器；否则回退详情容器
+            let container = editBtn.closest('[data-inline-field="' + field + '"]') || document.getElementById('nav2-detail-' + field);
+            if (!container) return;
+            // 若未预置 original/peer，则从现有文本与属性补齐
+            if (!container.hasAttribute('data-original')) {
+                const text = (container.querySelector('.nav2-detail-text')?.textContent || '').trim();
+                container.setAttribute('data-original', text);
+            }
+            if (!container.getAttribute('data-peer') && peer) {
+                container.setAttribute('data-peer', peer);
+            }
+            startNav2InlineEdit(container, field, peer);
+        }, false);
+        // 事件委托：详情/行内 内联编辑（确认）
+        contentEl.addEventListener('click', function (e) {
+            const okBtn = e.target.closest('.nav2-edit-confirm');
+            if (!okBtn) return;
+            e.preventDefault();
+            const field = okBtn.getAttribute('data-field');
+            const peer = okBtn.getAttribute('data-peer');
+            const container = okBtn.closest('[data-inline-field]') || document.getElementById('nav2-detail-' + field);
+            if (!container) return;
+            submitNav2InlineEdit(container, field, peer);
+        }, false);
+        // 事件委托：详情/行内 内联编辑（取消）
+        contentEl.addEventListener('click', function (e) {
+            const cancelBtn = e.target.closest('.nav2-edit-cancel');
+            if (!cancelBtn) return;
+            e.preventDefault();
+            const field = cancelBtn.getAttribute('data-field');
+            const container = cancelBtn.closest('[data-inline-field]') || document.getElementById('nav2-detail-' + field);
+            if (!container) return;
+            const pop = container.querySelector('.nav2-inline-pop');
+            if (pop) {
+                pop.remove();
+                return;
+            }
+            const original = container.getAttribute('data-original') || '';
+            const peerAttr = container.getAttribute('data-peer') || '';
+            container.innerHTML =
+                '<span class="nav2-detail-text">' + (original || '-') + '</span> ' +
+                '<button type="button" class="nav2-link nav2-edit-btn" data-field="' + field + '" data-peer="' + peerAttr + '" aria-label="编辑">' +
+                '<img src="' + ICON_EDIT_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+                '</button>';
+        }, false);
+        // 点击别名文本进入编辑（行内）
+        contentEl.addEventListener('click', function (e) {
+            const textEl = e.target.closest('[data-inline-field="alias"] .nav2-detail-text');
+            if (!textEl) return;
+            const container = textEl.closest('[data-inline-field="alias"]');
+            if (!container) return;
+            // 已处于编辑态则忽略
+            if (container.querySelector('input[type="text"][data-field="alias"]')) return;
+            const peer = container.getAttribute('data-peer') || '';
+            // 补齐 original
+            if (!container.hasAttribute('data-original')) {
+                const text = (textEl.textContent || '').trim();
+                container.setAttribute('data-original', text);
+            }
+            startNav2InlineEdit(container, 'alias', peer);
+        }, false);
+        // 事件委托：通用弹窗关闭（按钮，data-close="xxx"）
+        contentEl.addEventListener('click', function (e) {
+            const closeBtn = e.target.closest('[data-close]');
+            if (!closeBtn) return;
+            const token = closeBtn.getAttribute('data-close') || '';
+            if (!token) return;
+            e.preventDefault();
+            const rootId = token.endsWith('-root') ? token : `${token}-root`;
+            closeModalById(rootId);
+        }, false);
+        // 点击遮罩关闭（仅点击遮罩本身时关闭）
+        contentEl.addEventListener('click', function (e) {
+            const backdrop = e.target.closest('.modal-backdrop');
+            if (!backdrop) return;
+            if (e.target === backdrop) {
+                backdrop.style.display = 'none';
+                backdrop.setAttribute('aria-hidden', 'true');
+            }
+        }, false);
+        // 键盘 ESC 关闭（全局）
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeAllModals();
+            }
+        }, false);
+        // 页面可见性变化：恢复或暂停 nav-2 轮询
+        document.addEventListener('visibilitychange', function () {
+            if (!NAV2_RUNNING) return;
+            if (!document.hidden && !NAV2_TIMER_ID) {
+                nav2Tick();
+            }
+        }, false);
+        // 页面卸载前：清理资源
+        window.addEventListener('beforeunload', function () {
+            toggleNav2AutoRefresh(false);
+        }, false);
+        // 事件委托：处理 nav-2 重命名提交
+        contentEl.addEventListener('submit', function (e) {
+            const formEl = e.target;
+            if (!formEl || formEl.id !== 'nav2-rename-form') return;
+            e.preventDefault();
+            const fd = new FormData(formEl);
+            const peerId = (fd.get('peer_id') || '').trim();
+            const alias = (fd.get('alias') || '').trim();
+            if (!peerId || !alias) {
+                alert('请输入有效的别名');
+                return;
+            }
+            const csrf = getCookie('csrftoken');
+            const body = new URLSearchParams();
+            body.set('peer_id', peerId);
+            body.set('alias', alias);
+            fetch(RENAME_ALIAS_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-CSRFToken': csrf
+                },
+                body: body.toString()
+            }).then(resp => {
+                if (!resp.ok) throw new Error('请求失败');
+                return resp.json();
+            }).then(data => {
+                if (!data || data.ok !== true) {
+                    throw new Error(data && data.error ? data.error : '重命名失败');
+                }
+                closeNav2RenameModal();
+                // 刷新当前列表，保留筛选
+                const extra = collectNav2QueryOptions(document.getElementById('nav2-search-form'));
+                renderContent('nav-2', extra);
+                try {
+                    localStorage.setItem(STORAGE_KEY, 'nav-2');
+                } catch (e) {
+                }
+            }).catch(err => {
+                alert(err.message || '重命名失败，请稍后重试');
+            });
+        }, false);
+        // 事件委托：处理 nav-2 搜索提交
+        contentEl.addEventListener('submit', function (e) {
+            const formEl = e.target;
+            if (!formEl || formEl.id !== 'nav2-search-form') return;
+            e.preventDefault();
+            const key = 'nav-2';
+            const extra = collectNav2QueryOptions(formEl);
+            renderContent(key, extra);
+            try {
+                localStorage.setItem(STORAGE_KEY, key);
+            } catch (e) {
+            }
+        }, false);
+    }, false);
+</script>
+</body>
+</html>

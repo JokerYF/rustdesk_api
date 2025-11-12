@@ -1,0 +1,209 @@
+.nav2-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #0b3d60;
+    margin: 8px 0 10px 0;
+}
+
+.nav2-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.nav2-toolbar form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.nav2-input,
+.nav2-select {
+    appearance: none;
+    border: 1px solid #eaeef2;
+    background: #ffffff;
+    color: #1f2328;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    line-height: 1.2;
+    box-sizing: border-box;
+}
+
+.nav2-input::placeholder {
+    color: #8a939e;
+}
+
+.nav2-btn {
+    appearance: none;
+    border: 1px solid #eaeef2;
+    background: #ffffff;
+    color: #0b3d60;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.nav2-btn:hover:not(:disabled):not(.nav2-primary) {
+    background: #eef2f6;
+    border-color: #d0d7de;
+}
+
+.nav2-btn:disabled {
+    background: #f7f8fa;
+    color: #8a939e;
+    cursor: not-allowed;
+    border-color: #eaeef2;
+}
+
+.nav2-btn:focus-visible {
+    outline: none;
+    border-color: #1f6feb;
+    box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
+}
+
+.nav2-primary {
+    background: #1f6feb;
+    color: #ffffff;
+    border-color: #1f6feb;
+}
+
+.nav2-primary:hover {
+    background: #265ecf;
+    border-color: #265ecf;
+    color: #ffffff; /* 保持主按钮 hover 文本可读性 */
+}
+
+.nav2-danger {
+    color: #b91c1c;
+}
+
+.nav2-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.nav2-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid #eaeef2;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.nav2-table th,
+.nav2-table td {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 14px;
+    border-bottom: 1px solid #eaeef2;
+    vertical-align: middle;
+}
+
+.nav2-table thead th {
+    background: #f7f8fa;
+    color: #6a737d;
+    font-weight: 600;
+}
+
+.nav2-table tbody tr:hover {
+    background: #f9fbff;
+}
+
+.nav2-row-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.nav2-link {
+    background: none;
+    border: none;
+    color: #1f6feb;
+    cursor: pointer;
+    padding: 0;
+    font-size: 14px;
+}
+
+.nav2-link:hover {
+    text-decoration: underline;
+    color: #265ecf; /* 提升对比度，hover 更明显 */
+}
+
+.nav2-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.4;
+    border: 1px solid #eaeef2;
+    color: #6a737d;
+    background: #ffffff;
+}
+
+.nav2-status.online {
+    color: #065f46;
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+}
+
+.nav2-status.offline {
+    color: #6b7280;
+    border-color: #e5e7eb;
+    background: #f9fafb;
+}
+
+.nav2-empty {
+    padding: 16px;
+    color: #8a939e;
+    border: 1px dashed #eaeef2;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.nav2-pagination {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+/* 重命名表单样式 */
+.nav2-form-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.nav2-input-full {
+    width: 160px;
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .nav2-table th:nth-child(8),
+    .nav2-table td:nth-child(8) {
+        display: none; /* 小屏隐藏：创建时间 */
+    }
+}
+
+@media (max-width: 480px) {
+    .nav2-input-full {
+        width: 100%;
+    }
+}
+
+

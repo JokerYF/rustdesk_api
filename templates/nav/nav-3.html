@@ -1,0 +1,152 @@
+<!-- 样式共用 nav2 样式，避免新增 CSS -->
+{% load static %}
+
+<div class="nav2-section-title">用户管理</div>
+<div class="nav2-toolbar" aria-label="用户工具栏">
+    <form id="nav3-search-form" role="search" aria-label="用户搜索筛选">
+        <input class="nav2-input" type="text" name="q" value="{{ q|default:'' }}" placeholder="搜索用户名/邮箱/姓名"
+               aria-label="搜索关键词">
+        <button type="submit" class="nav2-btn nav2-primary">搜索</button>
+        <button type="button" class="nav2-btn nav3-reset-btn">重置</button>
+    </form>
+</div>
+
+{% if users %}
+    <div class="x-scroll-container">
+        <table class="nav2-table" aria-label="用户列表" data-table-id="nav3-users">
+            <thead>
+            <tr>
+                <th data-col-key="username">用户名</th>
+                <th data-col-key="full_name">姓名</th>
+                <th data-col-key="email">邮箱</th>
+                <th data-col-key="is_staff" style="width: 100px;">管理员</th>
+                <th data-col-key="last_login" style="width: 200px;">最近登录</th>
+                <th data-col-key="date_joined" style="width: 200px;">创建时间</th>
+                <th data-col-key="actions" style="width: 160px;">操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+                <tr>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.get_full_name|default:'-' }}</td>
+                    <td>{{ u.email|default:'-' }}</td>
+                    <td>
+                        {% if u.is_staff %}
+                            <span class="nav2-status online">是</span>
+                        {% else %}
+                            <span class="nav2-status offline">否</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ u.last_login|date:"Y-m-d H:i:s"|default:'-' }}</td>
+                    <td>{{ u.date_joined|date:"Y-m-d H:i:s" }}</td>
+                    <td>
+                        <div class="nav2-row-actions">
+                            <button type="button"
+                                    class="nav2-btn nav3-row-action"
+                                    data-action="edit"
+                                    data-username="{{ u.username }}"
+                                    data-fullname="{{ u.get_full_name|default:'' }}"
+                                    data-email="{{ u.email|default:'' }}"
+                                    data-is_staff="{% if u.is_staff %}1{% else %}0{% endif %}">编辑
+                            </button>
+                            <button type="button"
+                                    class="nav2-btn nav3-row-action"
+                                    data-action="reset_pwd"
+                                    data-username="{{ u.username }}">重置密码
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="nav2-pagination">
+        <button class="nav2-btn nav3-page-btn" data-key="nav-3"
+                {% if page_obj.has_previous %}data-page="{{ page_obj.previous_page_number }}"{% else %}data-page=""
+                disabled{% endif %}>上一页
+        </button>
+        <span style="color:#6a737d;">第 {{ page_obj.number }} / {{ paginator.num_pages }} 页（共 {{ paginator.count }} 条）</span>
+        <button class="nav2-btn nav3-page-btn" data-key="nav-3"
+                {% if page_obj.has_next %}data-page="{{ page_obj.next_page_number }}"{% else %}data-page=""
+                disabled{% endif %}>下一页
+        </button>
+    </div>
+{% else %}
+    <div class="nav2-empty">暂无用户数据</div>
+{% endif %}
+
+<!-- 编辑用户弹框 -->
+<div id="nav3-edit-root" class="modal-backdrop" aria-hidden="true">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="nav3-edit-title">
+        <div class="modal-header">
+            <h3 id="nav3-edit-title" class="modal-title">编辑用户</h3>
+            <button type="button" class="modal-close" data-close="nav3-edit" aria-label="关闭">
+                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="nav3-edit-form">
+                <div class="nav2-form-row">
+                    <label style="min-width:88px;color:#6a737d;">用户名</label>
+                    <input class="nav2-input nav2-input-full" type="text" name="username" id="nav3-edit-username"
+                           readonly>
+                </div>
+                <div class="nav2-form-row">
+                    <label style="min-width:88px;color:#6a737d;">姓名</label>
+                    <input class="nav2-input nav2-input-full" type="text" name="full_name" id="nav3-edit-fullname"
+                           placeholder="请输入姓名">
+                </div>
+                <div class="nav2-form-row">
+                    <label style="min-width:88px;color:#6a737d;">邮箱</label>
+                    <input class="nav2-input nav2-input-full" type="email" name="email" id="nav3-edit-email"
+                           placeholder="请输入邮箱">
+                </div>
+                <div class="nav2-form-row" style="align-items:center;">
+                    <label for="nav3-edit-is-staff" style="min-width:88px;color:#6a737d;">管理员</label>
+                    <input type="checkbox" id="nav3-edit-is-staff" name="is_staff" value="1">
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button type="button" class="nav2-btn" data-close="nav3-edit">取消</button>
+                    <button type="submit" class="nav2-btn nav2-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- 点击遮罩关闭 -->
+</div>
+
+<!-- 重置密码弹框 -->
+<div id="nav3-reset-root" class="modal-backdrop" aria-hidden="true">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="nav3-reset-title">
+        <div class="modal-header">
+            <h3 id="nav3-reset-title" class="modal-title">重置密码</h3>
+            <button type="button" class="modal-close" data-close="nav3-reset" aria-label="关闭">
+                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="nav3-reset-form">
+                <input type="hidden" name="username" id="nav3-reset-username">
+                <div class="nav2-form-row">
+                    <label for="nav3-reset-pass1" style="min-width:88px;color:#6a737d;">新密码</label>
+                    <input class="nav2-input nav2-input-full" type="password" name="password1" id="nav3-reset-pass1"
+                           placeholder="请输入新密码" required>
+                </div>
+                <div class="nav2-form-row">
+                    <label for="nav3-reset-pass2" style="min-width:88px;color:#6a737d;">确认密码</label>
+                    <input class="nav2-input nav2-input-full" type="password" name="password2" id="nav3-reset-pass2"
+                           placeholder="请再次输入新密码" required>
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button type="button" class="nav2-btn" data-close="nav3-reset">取消</button>
+                    <button type="submit" class="nav2-btn nav2-primary">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+

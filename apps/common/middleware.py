@@ -1,5 +1,8 @@
 from typing import Optional
 
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.utils.cache import patch_vary_headers
+
 
 class RealIPMiddleware:
     """
@@ -58,3 +61,51 @@ class RealIPMiddleware:
             return remote_addr.strip()
 
         return None
+
+
+class OptOutSessionMiddleware(SessionMiddleware):
+    """
+    可选择跳过续命的会话中间件。
+
+    通过请求头 ``X-Session-No-Renew: 1`` 指示该请求不应刷新会话的过期时间，
+    即便全局启用了 ``SESSION_SAVE_EVERY_REQUEST``。此中间件仅在存在该请求头时
+    跳过 SessionMiddleware 的默认保存逻辑，从而避免“滑动过期”续命。
+
+    :param get_response: 下一个中间件/视图的可调用对象
+    :type get_response: callable
+    :returns: 可调用的请求处理器
+    :rtype: callable
+    :notes:
+        - 仅用于“只读/无副作用”的接口（如前端轮询），不要在会修改会话状态的请求上使用该头
+        - 未携带该请求头时，行为与 Django 原生 SessionMiddleware 完全一致
+    """
+
+    def process_response(self, request, response):
+        # 未创建/未访问 session：交给父类处理（或直接返回）
+        if not hasattr(request, 'session'):
+            return super().process_response(request, response)
+
+        # 识别显式禁续命的请求（兼容 META 中的标准化头部）
+        no_renew = False
+        try:
+            # Django 5+ 提供 request.headers 取大小写无关头
+            no_renew = (request.headers.get('X-Session-No-Renew') == '1')
+        except Exception:
+            no_renew = (request.META.get('HTTP_X_SESSION_NO_RENEW') == '1')
+
+        if not no_renew:
+            # 正常请求：沿用原生行为
+            return super().process_response(request, response)
+
+        # 禁续命请求：
+        # 仅维护 Vary: Cookie（若访问过 session），但不触发保存与设置新 Cookie，
+        # 从而避免在 SAVE_EVERY_REQUEST=True 情况下“续命”。
+        try:
+            if getattr(request.session, 'accessed', False):
+                patch_vary_headers(response, ('Cookie',))
+        except Exception:
+            # 安全兜底：如 session 对象异常，仍回退到父类逻辑
+            return super().process_response(request, response)
+
+        # 不保存、不更新 Cookie，直接返回响应
+        return response

@@ -1,0 +1,161 @@
+<!-- 样式由宿主页 head 的静态 CSS 提供 -->
+{% load static %}
+
+<div class="nav2-section-title">设备管理</div>
+<div class="nav2-toolbar" aria-label="设备工具栏">
+    <form id="nav2-search-form" role="search" aria-label="设备搜索筛选">
+        <input class="nav2-input" type="text" name="q" value="{{ q|default:'' }}" placeholder="搜索设备ID/名称"
+               aria-label="搜索关键词">
+        <select class="nav2-select" name="os" aria-label="系统">
+            <option value="" {% if not os %}selected{% endif %}>所有系统</option>
+            <option value="Windows" {% if os == 'Windows' %}selected{% endif %}>Windows</option>
+            <option value="macOS" {% if os == 'macOS' %}selected{% endif %}>macOS</option>
+            <option value="Linux" {% if os == 'Linux' %}selected{% endif %}>Linux</option>
+            <option value="Android" {% if os == 'Android' %}selected{% endif %}>Android</option>
+            <option value="iOS" {% if os == 'iOS' %}selected{% endif %}>iOS</option>
+        </select>
+        <select class="nav2-select" name="status" aria-label="在线状态">
+            <option value="" {% if not status %}selected{% endif %}>所有状态</option>
+            <option value="online" {% if status == 'online' %}selected{% endif %}>在线</option>
+            <option value="offline" {% if status == 'offline' %}selected{% endif %}>离线</option>
+        </select>
+        <button type="submit" class="nav2-btn nav2-primary">搜索</button>
+        <button type="button" class="nav2-btn nav2-reset-btn">重置</button>
+    </form>
+    {#    <div class="nav2-toolbar-actions" aria-label="批量操作">#}
+    {#        <button type="button" class="nav2-btn nav2-bulk-btn" data-action="enable">批量启用</button>#}
+    {#        <button type="button" class="nav2-btn nav2-bulk-btn" data-action="disable">批量禁用</button>#}
+    {#        <button type="button" class="nav2-btn nav2-bulk-btn nav2-danger" data-action="delete">批量删除</button>#}
+    {#        <button type="button" class="nav2-btn nav2-bulk-btn" data-action="export">导出列表</button>#}
+    {#    </div>#}
+    <!-- 可按需添加：新建设备/导入等入口 -->
+    <!-- <button type="button" class="nav2-btn">新建设备</button> -->
+    <!-- <button type="button" class="nav2-btn">导入</button> -->
+</div>
+
+{% if devices %}
+    <div class="x-scroll-container">
+        <table class="nav2-table" aria-label="设备列表" data-table-id="nav2-devices">
+        <thead>
+        <tr>
+            <th data-col-key="select" style="width: 44px;">
+                <input type="checkbox" id="nav2-select-all" aria-label="全选设备">
+            </th>
+            <th data-col-key="peer_id">设备ID</th>
+            <th data-col-key="alias">设备别名</th>
+            <th data-col-key="device_name">设备名</th>
+            <th data-col-key="tags">设备标签</th>
+            <th data-col-key="status">状态</th>
+            <th data-col-key="version">版本</th>
+            <th data-col-key="created_at" style="width: 200px;">创建时间</th>
+            <th data-col-key="actions" style="width: 240px;">操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for d in devices %}
+            <tr data-peer-id="{{ d.peer_id }}">
+                <td>
+                    <input type="checkbox" class="nav2-row-checkbox" value="{{ d.peer_id }}"
+                           aria-label="选择设备 {{ d.peer_id }}">
+                </td>
+                <td>{{ d.peer_id }}</td>
+                <td data-inline-field="alias" data-peer="{{ d.peer_id }}" data-original="{{ d.alias|default:'' }}">
+                    <span class="nav2-detail-text">{{ d.alias|default:'-' }}</span>
+                    <button type="button"
+                            class="nav2-link nav2-edit-btn"
+                            data-field="alias"
+                            data-peer="{{ d.peer_id }}"
+                            aria-label="编辑别名">
+                        <img src="/static/icons/edit.svg" width="16" height="16" alt="" aria-hidden="true">
+                    </button>
+                </td>
+                <td>{{ d.device_name }}</td>
+                <td>{{ d.tags|default:'-' }}</td>
+                <td>
+                    {% if d.is_online %}
+                        <span class="nav2-status online" data-status-for="{{ d.peer_id }}">在线</span>
+                    {% else %}
+                        <span class="nav2-status offline" data-status-for="{{ d.peer_id }}">离线</span>
+                    {% endif %}
+                </td>
+                <td>{{ d.version }}</td>
+                <td>{{ d.created_at|date:"Y-m-d H:i:s" }}</td>
+                <td>
+                    <div class="nav2-row-actions">
+                        <button type="button" class="nav2-link nav2-row-action" data-action="view"
+                                data-id="{{ d.peer_id }}">详情
+                        </button>
+                        {# 移除“重命名”按钮，改为单元格内联编辑 #}
+                        <button type="button" class="nav2-link nav2-row-action" data-action="add_to_book"
+                                data-id="{{ d.peer_id }}">添加到地址簿
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+        </table>
+    </div>
+    <div class="nav2-pagination">
+        <button class="nav2-btn nav2-page-btn" data-key="nav-2"
+                {% if page_obj.has_previous %}data-page="{{ page_obj.previous_page_number }}"{% else %}data-page=""
+                disabled{% endif %}>上一页
+        </button>
+        <span style="color:#6a737d;">第 {{ page_obj.number }} / {{ paginator.num_pages }} 页（共 {{ paginator.count }} 条）</span>
+        <button class="nav2-btn nav2-page-btn" data-key="nav-2"
+                {% if page_obj.has_next %}data-page="{{ page_obj.next_page_number }}"{% else %}data-page=""
+                disabled{% endif %}>下一页
+        </button>
+        <!-- 预留每页大小控制（后端支持后启用）
+    <select class="nav2-select" name="page_size" aria-label="每页条数">
+        <option value="10" {% if page_size == 10 %}selected{% endif %}>10</option>
+        <option value="20" {% if page_size == 20 %}selected{% endif %}>20</option>
+        <option value="50" {% if page_size == 50 %}selected{% endif %}>50</option>
+    </select>
+    -->
+    </div>
+{% else %}
+    <div class="nav2-empty">暂无设备数据</div>
+{% endif %}
+
+<!-- 详情弹框（内容留空，供后续填充） -->
+<div id="nav2-modal-root" class="modal-backdrop" aria-hidden="true">
+    <div class="modal modal--md" role="dialog" aria-modal="true" aria-labelledby="nav2-modal-title">
+        <div class="modal-header">
+            <h3 id="nav2-modal-title" class="modal-title">设备详情</h3>
+            <button type="button" class="modal-close" data-close="nav2-modal" aria-label="关闭">
+                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
+            </button>
+        </div>
+        <div class="modal-body" id="nav2-modal-body">
+            <!-- 空内容：请在后续实现中填充 -->
+        </div>
+    </div>
+    <!-- 点击遮罩关闭 -->
+</div>
+
+<!-- 重命名弹框（提交后端修改 alias） -->
+<div id="nav2-rename-root" class="modal-backdrop" aria-hidden="true">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="nav2-rename-title">
+        <div class="modal-header">
+            <h3 id="nav2-rename-title" class="modal-title">重命名设备</h3>
+            <button type="button" class="modal-close" data-close="nav2-rename" aria-label="关闭">
+                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="nav2-rename-form">
+                <input type="hidden" name="peer_id" id="nav2-rename-peer">
+                <div class="nav2-form-row">
+                    <label for="nav2-rename-alias" style="min-width:68px;color:#6a737d;">新别名</label>
+                    <input class="nav2-input nav2-input-full" type="text" name="alias" id="nav2-rename-alias"
+                           placeholder="请输入设备别名" required>
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button type="button" class="nav2-btn" data-close="nav2-rename">取消</button>
+                    <button type="submit" class="nav2-btn nav2-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

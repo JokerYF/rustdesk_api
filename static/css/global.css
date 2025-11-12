@@ -1,0 +1,27 @@
+/* Global width defaults to viewport width */
+html, body {
+    width: 100%;
+    max-width: 100vw;
+}
+
+/* Prevent page-level horizontal scrolling; prefer container-level scrolling */
+body {
+    overflow-x: hidden;
+}
+
+/* Reusable horizontal scroll container */
+.x-scroll-container {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Inside scroll container, allow tables to grow beyond container to trigger horizontal scroll */
+.x-scroll-container .resizable-table {
+    width: max-content;
+    min-width: 100%;
+}
+
+

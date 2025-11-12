@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>登录</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
+    <!-- 该模板可直接用于 django.contrib.auth.views.LoginView 或自定义视图 -->
+</head>
+<body>
+<div class="page">
+    <div class="card" role="region" aria-label="登录">
+        <h1 class="title">账号登录</h1>
+        <p class="subtitle">请输入用户名与密码继续</p>
+
+        {# 全局消息提示（Django messages） #}
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="messages {% if message.tags %}msg-{{ message.tags }}{% endif %}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'web_login' %}">
+            {% csrf_token %}
+
+            {# 处理 next 参数，便于登录后跳转 #}
+            {% if next %}
+                <input type="hidden" name="next" value="{{ next }}"/>
+            {% endif %}
+
+            {# 若提供了 AuthenticationForm 或自定义表单，则按字段渲染；否则使用基础输入框 #}
+            {% if form %}
+                {% if form.non_field_errors %}
+                    <div class="errors">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div>
+                    <label for="id_username">用户名</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="errors">{{ form.username.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="id_password">密码</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <div class="errors">{{ form.password.errors }}</div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div>
+                    <label for="id_username">用户名</label>
+                    <input id="id_username" name="username" type="text" autocomplete="username" required/>
+                </div>
+
+                <div>
+                    <label for="id_password">密码</label>
+                    <input id="id_password" name="password" type="password" autocomplete="current-password" required/>
+                </div>
+            {% endif %}
+
+            <div class="row">
+                <label class="checkbox"><input type="checkbox" name="remember" value="1"/> 记住我</label>
+                <a href="/password-reset/">忘记密码？</a>
+            </div>
+
+            <button class="btn" type="submit">登录</button>
+        </form>
+
+        <div class="footer">
+            没有账号？请联系管理员创建账户
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
+
