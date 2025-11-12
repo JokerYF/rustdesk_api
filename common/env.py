@@ -13,6 +13,7 @@ class PublicConfig:
     DB_TYPE = get_env('DATABASE', 'sqlite3')
     DEBUG = str2bool(get_env('DEBUG', False))
     APP_VERSION = get_env('APP_VERSION', '')
+    SESSION_TIMEOUT = int(get_env('SESSION_TIMEOUT', 3600))
 
 
 class GunicornConfig:

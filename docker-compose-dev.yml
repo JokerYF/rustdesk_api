@@ -8,7 +8,7 @@ services:
     environment:
       - DATABASE=sqlite3
       - TZ=Asia/Shanghai
-      - DEGUT=1
+      - DEBUG=1
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data

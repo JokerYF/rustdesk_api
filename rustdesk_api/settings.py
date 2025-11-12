@@ -29,12 +29,14 @@ SECRET_KEY = 'django-insecure-)io=oztl360$7mt#&d86kecbaklz^w==@toytn#qepbitg2@hr
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = PublicConfig.DEBUG
 
+LOGGING = build_django_logging(DEBUG, LOG_PATH)
+
 ALLOWED_HOSTS = ['*']
 
 # debug-toolbar host
 INTERNAL_IPS = ['localhost', '127.0.0.1'] if DEBUG else []
 DEBUG_TOOLBAR_CONFIG = {
-    'SQL_WARNING_THRESHOLD': 50,  # 超过50ms标红
+    'SQL_WARNING_THRESHOLD': 200,  # 超过200ms标红
     # 'RENDER_PANELS': True,        # 完整显示长查询
 }
 
@@ -57,7 +59,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'apps.common.middleware.OptOutSessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -118,8 +121,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LOGGING = build_django_logging(DEBUG, LOG_PATH)
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
@@ -133,7 +134,12 @@ USE_TZ = True  # 使用本地化时间
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -144,3 +150,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # 注意：仅在受信任代理链路下开启
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# session设置
+# 会话有效期（秒
+SESSION_COOKIE_AGE = PublicConfig.SESSION_TIMEOUT  # session失效时间
+# 每次请求都保存 session（滑动过期）
+SESSION_SAVE_EVERY_REQUEST = True
+# 浏览器关闭即失效，True 表示不设置持久化过期时间，让浏览器会话结束即删除
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
