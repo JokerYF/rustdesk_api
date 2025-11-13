@@ -9,6 +9,49 @@
     <link rel="stylesheet" href="/static/css/home.css">
     <link rel="stylesheet" href="/static/css/nav1.css">
     <link rel="stylesheet" href="/static/css/nav2.css">
+    <style>
+        /* 轻量 toast 样式（仅此页使用） */
+        .toast-container {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center
+        }
+
+        .toast {
+            min-width: 200px;
+            max-width: 80vw;
+            color: #fff;
+            border-radius: 6px;
+            padding: 10px 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .2);
+            opacity: 0;
+            transform: translateY(-6px);
+            transition: opacity .18s ease, transform .18s ease
+        }
+
+        .toast--show {
+            opacity: 1;
+            transform: translateY(0)
+        }
+
+        .toast--error {
+            background: rgba(185, 28, 28, .95)
+        }
+
+        .toast--success {
+            background: rgba(22, 163, 74, .95)
+        }
+
+        .toast--info {
+            background: rgba(37, 99, 235, .95)
+        }
+    </style>
 </head>
 <body>
 <header class="header">
@@ -49,12 +92,82 @@
     const DEVICE_STATUSES_URL = "{% url 'web_device_statuses' %}";
     const USER_UPDATE_URL = "{% url 'web_user_update' %}";
     const USER_RESET_PWD_URL = "{% url 'web_user_reset_password' %}";
+    const LOGIN_URL = "{% url 'web_login' %}";
+    const HOME_URL = "{% url 'web_home' %}";
     const ICON_EDIT_URL = "/static/icons/edit.svg";
     const ICON_CONFIRM_URL = "/static/icons/confirm.svg";
     const ICON_CANCEL_URL = "/static/icons/cancel.svg";
 
-    
+    // 轻量 toast 工具
+    function getToastContainer() {
+        let c = document.querySelector('.toast-container');
+        if (!c) {
+            c = document.createElement('div');
+            c.className = 'toast-container';
+            document.body.appendChild(c);
+        }
+        return c;
+    }
 
+    function showToast(message, type = 'error', timeoutMs = 3000) {
+        const container = getToastContainer();
+        const div = document.createElement('div');
+        const kind = (type === 'success' || type === 'info') ? type : 'error';
+        div.className = `toast toast--${kind}`;
+        div.textContent = message || '发生错误';
+        container.appendChild(div);
+        // 下一帧展示动画
+        requestAnimationFrame(() => div.classList.add('toast--show'));
+        setTimeout(() => {
+            div.classList.remove('toast--show');
+            setTimeout(() => div.remove(), 200);
+        }, timeoutMs);
+    }
+
+    // 文本解码（URL 解码、HTML 实体解码），避免展示原始 JSON/转义串
+    function decodeMessage(raw, fallbackText = '发生错误') {
+        let msg = String(raw || '').trim();
+        if (!msg) return fallbackText;
+        // 若是 JSON 字符串，尝试提取常见的 message 字段
+        if (msg[0] === '{' || msg[0] === '[') {
+            try {
+                const data = JSON.parse(msg);
+                msg = String((data && (data.err_msg || data.error || data.message || data.detail)) || '').trim() || fallbackText;
+            } catch (e) {
+                // 忽略解析失败，继续解码
+            }
+        }
+        // URL 解码
+        if (/%[0-9A-Fa-f]{2}/.test(msg)) {
+            try {
+                msg = decodeURIComponent(msg);
+            } catch (e) {
+            }
+        }
+        // HTML 实体解码
+        try {
+            const ta = document.createElement('textarea');
+            ta.innerHTML = msg;
+            msg = ta.value || ta.textContent || msg;
+        } catch (e) {
+        }
+        msg = String(msg || '').trim();
+        return msg || fallbackText;
+    }
+
+    // 统一解析请求错误信息（JSON 优先，其次纯文本），只返回解码后的错误信息
+    function parseFetchError(resp) {
+        const statusText = `HTTP ${resp.status}`;
+        return resp.clone().json().then(d => {
+            const msg = (d && (d.err_msg || d.error || d.message || d.detail)) ? String(d.err_msg || d.error || d.message || d.detail) : statusText;
+            throw new Error(decodeMessage(msg, statusText));
+        }).catch(() => {
+            return resp.clone().text().then(t => {
+                const txt = (t || '').trim();
+                throw new Error(decodeMessage(txt, statusText));
+            });
+        });
+    }
     // nav-2 自动刷新控制变量
     let NAV2_TIMER_ID = null;
     let NAV2_RUNNING = false;
@@ -235,7 +348,18 @@
                 'X-Requested-With': 'XMLHttpRequest'
             }
         }).then(resp => {
+            // 会话失效时后端会重定向到登录页；fetch 会自动跟随，标记 redirected=true
+            if (resp.redirected && resp.url && resp.url.indexOf(LOGIN_URL) !== -1) {
+                // 强制跳回首页作为 next，避免登录后直接打开 nav-content 片段页导致样式缺失
+                window.location.href = `${LOGIN_URL}?next=${encodeURIComponent(HOME_URL)}`;
+                return Promise.reject(new Error('redirected_to_login'));
+            }
             if (!resp.ok) {
+                if (resp.status === 401 || resp.status === 403) {
+                    // 兜底同样指向首页
+                    window.location.href = `${LOGIN_URL}?next=${encodeURIComponent(HOME_URL)}`;
+                    return Promise.reject(new Error('unauthorized_to_login'));
+                }
                 throw new Error(`HTTP ${resp.status}`);
             }
             return resp.text();
@@ -358,7 +482,7 @@
             if (!resp.ok) throw new Error('请求失败');
             return resp.json();
         }).then(data => {
-            if (!data || data.ok !== true) throw new Error((data && data.error) || '加载失败');
+            if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '加载失败');
             const html = renderNav2DetailHTML(data.data || {});
             if (bodyEl) bodyEl.innerHTML = html;
         }).catch(err => {
@@ -446,10 +570,10 @@
             },
             body: body.toString()
         }).then(resp => {
-            if (!resp.ok) throw new Error('请求失败');
+            if (!resp.ok) return parseFetchError(resp);
             return resp.json();
         }).then(data => {
-            if (!data || data.ok !== true) throw new Error((data && data.error) || '保存失败');
+            if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '保存失败');
             // 成功：若在详情弹窗内，刷新详情；否则仅刷新列表
             const inModal = !!ddEl.closest('#nav2-modal-root');
             if (inModal) {
@@ -462,7 +586,7 @@
             } catch (e) {
             }
         }).catch(err => {
-            alert(err.message || '保存失败，请稍后重试');
+            showToast(err.message || '保存失败，请稍后重试', 'error');
         });
     }
 
@@ -717,7 +841,7 @@
             const email = (fd.get('email') || '').trim();
             const isStaff = formEl.querySelector('#nav3-edit-is-staff')?.checked ? '1' : '0';
             if (!username) {
-                alert('用户名无效');
+                showToast('用户名无效', 'error');
                 return;
             }
             const csrf = getCookie('csrftoken');
@@ -736,10 +860,10 @@
                 },
                 body: body.toString()
             }).then(resp => {
-                if (!resp.ok) throw new Error('请求失败');
+                if (!resp.ok) return parseFetchError(resp);
                 return resp.json();
             }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && data.error) || '保存失败');
+                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '保存失败');
                 closeModalById('nav3-edit-root');
                 const extra = collectNav3QueryOptions(document.getElementById('nav3-search-form'));
                 renderContent('nav-3', extra);
@@ -748,7 +872,7 @@
                 } catch (e) {
                 }
             }).catch(err => {
-                alert(err.message || '保存失败，请稍后重试');
+                showToast(err.message || '保存失败，请稍后重试', 'error');
             });
         }, false);
         // 提交 nav-3 重置密码表单
@@ -761,11 +885,11 @@
             const p1 = (fd.get('password1') || '').trim();
             const p2 = (fd.get('password2') || '').trim();
             if (!username || !p1 || !p2) {
-                alert('请输入完整信息');
+                showToast('请输入完整信息', 'error');
                 return;
             }
             if (p1 !== p2) {
-                alert('两次密码不一致');
+                showToast('两次密码不一致', 'error');
                 return;
             }
             const csrf = getCookie('csrftoken');
@@ -783,10 +907,10 @@
                 },
                 body: body.toString()
             }).then(resp => {
-                if (!resp.ok) throw new Error('请求失败');
+                if (!resp.ok) return parseFetchError(resp);
                 return resp.json();
             }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && data.error) || '重置失败');
+                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '重置失败');
                 closeModalById('nav3-reset-root');
                 const extra = collectNav3QueryOptions(document.getElementById('nav3-search-form'));
                 renderContent('nav-3', extra);
@@ -795,7 +919,7 @@
                 } catch (e) {
                 }
             }).catch(err => {
-                alert(err.message || '重置失败，请稍后重试');
+                showToast(err.message || '重置失败，请稍后重试', 'error');
             });
         }, false);
         // 事件委托：处理 nav-2 重置
@@ -960,7 +1084,7 @@
             const peerId = (fd.get('peer_id') || '').trim();
             const alias = (fd.get('alias') || '').trim();
             if (!peerId || !alias) {
-                alert('请输入有效的别名');
+                showToast('请输入有效的别名', 'error');
                 return;
             }
             const csrf = getCookie('csrftoken');
@@ -977,11 +1101,11 @@
                 },
                 body: body.toString()
             }).then(resp => {
-                if (!resp.ok) throw new Error('请求失败');
+                if (!resp.ok) return parseFetchError(resp);
                 return resp.json();
             }).then(data => {
                 if (!data || data.ok !== true) {
-                    throw new Error(data && data.error ? data.error : '重命名失败');
+                    throw new Error((data && (data.err_msg || data.error)) ? (data.err_msg || data.error) : '重命名失败');
                 }
                 closeNav2RenameModal();
                 // 刷新当前列表，保留筛选
@@ -992,7 +1116,7 @@
                 } catch (e) {
                 }
             }).catch(err => {
-                alert(err.message || '重命名失败，请稍后重试');
+                showToast(err.message || '重命名失败，请稍后重试', 'error');
             });
         }, false);
         // 事件委托：处理 nav-2 搜索提交

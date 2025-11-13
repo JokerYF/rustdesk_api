@@ -200,14 +200,14 @@ def rename_alias(request: HttpRequest) -> JsonResponse:
     - 针对 (peer_id, 默认地址簿) 维度进行 upsert
     """
     if request.method != 'POST':
-        return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
+        return JsonResponse({'ok': False, 'err_msg': 'Method not allowed'}, status=405)
     peer_id = (request.POST.get('peer_id') or '').strip()
     alias_text = (request.POST.get('alias') or '').strip()
     if not peer_id or not alias_text:
-        return JsonResponse({'ok': False, 'error': '参数错误'}, status=400)
+        return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
     peer = PeerInfo.objects.filter(peer_id=peer_id).first()
     if not peer:
-        return JsonResponse({'ok': False, 'error': '设备不存在'}, status=404)
+        return JsonResponse({'ok': False, 'err_msg': '设备不存在'}, status=404)
     # 获取或创建默认地址簿（私有）
     personal, _ = Personal.objects.get_or_create(
         create_user=request.user,
@@ -235,13 +235,13 @@ def device_detail(request: HttpRequest) -> JsonResponse:
     :rtype: JsonResponse
     """
     if request.method != 'GET':
-        return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
+        return JsonResponse({'ok': False, 'err_msg': 'Method not allowed'}, status=405)
     peer_id = (request.GET.get('peer_id') or '').strip()
     if not peer_id:
-        return JsonResponse({'ok': False, 'error': '参数错误'}, status=400)
+        return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
     peer = PeerInfo.objects.filter(peer_id=peer_id).first()
     if not peer:
-        return JsonResponse({'ok': False, 'error': '设备不存在'}, status=404)
+        return JsonResponse({'ok': False, 'err_msg': '设备不存在'}, status=404)
     # 默认地址簿下的 alias（若无则回退任意一个 alias）
     default_personal = Personal.objects.filter(
         create_user=request.user,
@@ -287,13 +287,13 @@ def update_device(request: HttpRequest) -> JsonResponse:
     - 标签写入 ClientTags（当前用户 + 默认地址簿 guid 作用域）
     """
     if request.method != 'POST':
-        return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
+        return JsonResponse({'ok': False, 'err_msg': 'Method not allowed'}, status=405)
     peer_id = (request.POST.get('peer_id') or '').strip()
     if not peer_id:
-        return JsonResponse({'ok': False, 'error': '参数错误'}, status=400)
+        return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
     peer = PeerInfo.objects.filter(peer_id=peer_id).first()
     if not peer:
-        return JsonResponse({'ok': False, 'error': '设备不存在'}, status=404)
+        return JsonResponse({'ok': False, 'err_msg': '设备不存在'}, status=404)
 
     alias_text = request.POST.get('alias')
     tags_str = request.POST.get('tags')
@@ -361,7 +361,7 @@ def device_statuses(request: HttpRequest) -> JsonResponse:
         - 仅执行只读查询，不做任何写操作
     """
     if request.method != 'GET':
-        return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
+        return JsonResponse({'ok': False, 'err_msg': 'Method not allowed'}, status=405)
     raw_ids = (request.GET.get('ids') or '').strip()
     if not raw_ids:
         return JsonResponse({'ok': True, 'data': {}})
@@ -391,15 +391,15 @@ def update_user(request: HttpRequest) -> JsonResponse:
     :return: {"ok": true}
     """
     if request.method != 'POST':
-        return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
+        return JsonResponse({'ok': False, 'err_msg': 'Method not allowed'}, status=405)
     if not request.user.is_staff:
-        return JsonResponse({'ok': False, 'error': '无权限'}, status=403)
+        return JsonResponse({'ok': False, 'err_msg': '无权限'}, status=403)
     username = (request.POST.get('username') or '').strip()
     if not username:
-        return JsonResponse({'ok': False, 'error': '参数错误'}, status=400)
+        return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
     user = User.objects.filter(username=username).first()
     if not user:
-        return JsonResponse({'ok': False, 'error': '用户不存在'}, status=404)
+        return JsonResponse({'ok': False, 'err_msg': '用户不存在'}, status=404)
     full_name = (request.POST.get('full_name') or '').strip()
     email = (request.POST.get('email') or '').strip()
     is_staff_raw = request.POST.get('is_staff')
@@ -425,21 +425,21 @@ def reset_user_password(request: HttpRequest) -> JsonResponse:
     :return: {"ok": true}
     """
     if request.method != 'POST':
-        return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
+        return JsonResponse({'ok': False, 'err_msg': 'Method not allowed'}, status=405)
     if not request.user.is_staff:
-        return JsonResponse({'ok': False, 'error': '无权限'}, status=403)
+        return JsonResponse({'ok': False, 'err_msg': '无权限'}, status=403)
     username = (request.POST.get('username') or '').strip()
     password1 = (request.POST.get('password1') or '').strip()
     password2 = (request.POST.get('password2') or '').strip()
     if not username or not password1 or not password2:
-        return JsonResponse({'ok': False, 'error': '参数错误'}, status=400)
+        return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
     if password1 != password2:
-        return JsonResponse({'ok': False, 'error': '两次密码不一致'}, status=400)
+        return JsonResponse({'ok': False, 'err_msg': '两次密码不一致'}, status=400)
     if len(password1) < 6:
-        return JsonResponse({'ok': False, 'error': '密码长度至少为6位'}, status=400)
+        return JsonResponse({'ok': False, 'err_msg': '密码长度至少为6位'}, status=400)
     user = User.objects.filter(username=username).first()
     if not user:
-        return JsonResponse({'ok': False, 'error': '用户不存在'}, status=404)
+        return JsonResponse({'ok': False, 'err_msg': '用户不存在'}, status=404)
     user.set_password(password1)
     user.save(update_fields=['password'])
     return JsonResponse({'ok': True})
