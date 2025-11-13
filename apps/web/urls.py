@@ -22,4 +22,6 @@ urlpatterns = [
     path('personal/detail', view_home.personal_detail, name='web_personal_detail'),
     path('personal/add-device', view_home.add_device_to_personal, name='web_personal_add_device'),
     path('personal/remove-device', view_home.remove_device_from_personal, name='web_personal_remove_device'),
+    path('personal/update-alias', view_home.update_device_alias_in_personal, name='web_personal_update_alias'),
+    path('personal/update-tags', view_home.update_device_tags_in_personal, name='web_personal_update_tags'),
 ]

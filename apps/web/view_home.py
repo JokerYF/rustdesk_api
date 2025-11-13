@@ -650,9 +650,14 @@ def personal_detail(request: HttpRequest) -> JsonResponse:
             modified_at__gte=online_threshold
         ).exists()
 
+        # 获取该设备在该地址簿中的标签
+        client_tags = ClientTags.objects.filter(peer_id=peer.peer_id, guid=guid).first()
+        tags = client_tags.tags if client_tags else ''
+
         devices.append({
             'peer_id': peer.peer_id,
             'alias': alias.alias,
+            'tags': tags,
             'device_name': peer.device_name,
             'os': peer.os,
             'version': peer.version,
@@ -774,5 +779,92 @@ def remove_device_from_personal(request: HttpRequest) -> JsonResponse:
 
     if deleted_count == 0:
         return JsonResponse({'ok': False, 'err_msg': '设备不在该地址簿中'}, status=404)
+
+    return JsonResponse({'ok': True})
+
+
+@request_debug_log
+@login_required(login_url='web_login')
+def update_device_alias_in_personal(request: HttpRequest) -> JsonResponse:
+    """
+    在地址簿中更新设备别名
+
+    :param request: POST，包含 guid, peer_id, alias
+    :return: {"ok": true}
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'err_msg': 'Method not allowed'}, status=405)
+    guid = (request.POST.get('guid') or '').strip()
+    peer_id = (request.POST.get('peer_id') or '').strip()
+    alias_text = (request.POST.get('alias') or '').strip()
+
+    if not guid or not peer_id:
+        return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
+
+    # 验证地址簿权限
+    personal = Personal.objects.filter(guid=guid, create_user=request.user).first()
+    if not personal:
+        return JsonResponse({'ok': False, 'err_msg': '地址簿不存在或无权限操作'}, status=404)
+
+    # 验证设备存在
+    peer = PeerInfo.objects.filter(peer_id=peer_id).first()
+    if not peer:
+        return JsonResponse({'ok': False, 'err_msg': '设备不存在'}, status=404)
+
+    # 如果别名为空，使用设备ID作为别名
+    if not alias_text:
+        alias_text = peer_id
+
+    # 更新别名
+    alias_obj = Alias.objects.filter(peer_id=peer, guid=personal).first()
+    if not alias_obj:
+        return JsonResponse({'ok': False, 'err_msg': '设备不在该地址簿中'}, status=404)
+
+    alias_obj.alias = alias_text
+    alias_obj.save(update_fields=['alias'])
+
+    return JsonResponse({'ok': True})
+
+
+@request_debug_log
+@login_required(login_url='web_login')
+def update_device_tags_in_personal(request: HttpRequest) -> JsonResponse:
+    """
+    在地址簿中更新设备标签
+
+    :param request: POST，包含 guid, peer_id, tags
+    :return: {"ok": true}
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'err_msg': 'Method not allowed'}, status=405)
+    guid = (request.POST.get('guid') or '').strip()
+    peer_id = (request.POST.get('peer_id') or '').strip()
+    tags_text = (request.POST.get('tags') or '').strip()
+
+    if not guid or not peer_id:
+        return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
+
+    # 验证地址簿权限
+    personal = Personal.objects.filter(guid=guid, create_user=request.user).first()
+    if not personal:
+        return JsonResponse({'ok': False, 'err_msg': '地址簿不存在或无权限操作'}, status=404)
+
+    # 验证设备存在
+    peer = PeerInfo.objects.filter(peer_id=peer_id).first()
+    if not peer:
+        return JsonResponse({'ok': False, 'err_msg': '设备不存在'}, status=404)
+
+    # 更新标签（在ClientTags表中）
+    # 先删除该设备在该地址簿的所有标签
+    ClientTags.objects.filter(peer_id=peer_id, guid=guid).delete()
+
+    # 如果有新标签，则添加
+    if tags_text:
+        ClientTags.objects.create(
+            user=request.user,
+            peer_id=peer_id,
+            tags=tags_text,
+            guid=guid
+        )
 
     return JsonResponse({'ok': True})

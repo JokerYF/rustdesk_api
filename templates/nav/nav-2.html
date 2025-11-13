@@ -42,13 +42,11 @@
                 <input type="checkbox" id="nav2-select-all" aria-label="全选设备">
             </th>
             <th data-col-key="peer_id">设备ID</th>
-            <th data-col-key="alias">设备别名</th>
             <th data-col-key="device_name">设备名</th>
-            <th data-col-key="tags">设备标签</th>
             <th data-col-key="status">状态</th>
             <th data-col-key="version">版本</th>
             <th data-col-key="created_at" style="width: 200px;">创建时间</th>
-            <th data-col-key="actions" style="width: 240px;">操作</th>
+            <th data-col-key="actions" style="width: 160px;">操作</th>
         </tr>
         </thead>
         <tbody>
@@ -59,18 +57,7 @@
                            aria-label="选择设备 {{ d.peer_id }}">
                 </td>
                 <td>{{ d.peer_id }}</td>
-                <td data-inline-field="alias" data-peer="{{ d.peer_id }}" data-original="{{ d.alias|default:'' }}">
-                    <span class="nav2-detail-text">{{ d.alias|default:'-' }}</span>
-                    <button type="button"
-                            class="nav2-link nav2-edit-btn"
-                            data-field="alias"
-                            data-peer="{{ d.peer_id }}"
-                            aria-label="编辑别名">
-                        <img src="/static/icons/edit.svg" width="16" height="16" alt="" aria-hidden="true">
-                    </button>
-                </td>
                 <td>{{ d.device_name }}</td>
-                <td>{{ d.tags|default:'-' }}</td>
                 <td>
                     {% if d.is_online %}
                         <span class="nav2-status online" data-status-for="{{ d.peer_id }}">在线</span>
@@ -82,10 +69,6 @@
                 <td>{{ d.created_at|date:"Y-m-d H:i:s" }}</td>
                 <td>
                     <div class="nav2-row-actions">
-                        <button type="button" class="nav2-link nav2-row-action" data-action="view"
-                                data-id="{{ d.peer_id }}">详情
-                        </button>
-                        {# 移除“重命名”按钮，改为单元格内联编辑 #}
                         <button type="button" class="nav2-link nav2-row-action" data-action="add_to_book"
                                 data-id="{{ d.peer_id }}">添加到地址簿
                         </button>

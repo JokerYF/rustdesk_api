@@ -1388,14 +1388,26 @@
             let devicesHtml = '';
             if (detail.devices && detail.devices.length > 0) {
                 devicesHtml = '<table class="nav2-table" style="margin-top:16px;"><thead><tr>' +
-                    '<th>设备ID</th><th>别名</th><th>设备名</th><th>系统</th><th>状态</th><th>操作</th>' +
+                    '<th>设备ID</th><th>别名</th><th>标签</th><th>设备名</th><th>系统</th><th>状态</th><th>操作</th>' +
                     '</tr></thead><tbody>';
                 detail.devices.forEach(d => {
                     const statusClass = d.is_online ? 'online' : 'offline';
                     const statusText = d.is_online ? '在线' : '离线';
-                    devicesHtml += '<tr>' +
+                    const tags = Array.isArray(d.tags) ? d.tags.join(', ') : (d.tags || '');
+                    devicesHtml += '<tr data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '">' +
                         '<td>' + (d.peer_id || '-') + '</td>' +
-                        '<td>' + (d.alias || '-') + '</td>' +
+                        '<td class="nav4-editable-cell" data-field="alias" data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '" data-original="' + (d.alias || '') + '">' +
+                        '<span class="nav2-detail-text">' + (d.alias || '-') + '</span> ' +
+                        '<button type="button" class="nav2-link nav4-edit-btn" data-field="alias" data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '" aria-label="编辑别名">' +
+                        '<img src="' + ICON_EDIT_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+                        '</button>' +
+                        '</td>' +
+                        '<td class="nav4-editable-cell" data-field="tags" data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '" data-original="' + (tags || '') + '">' +
+                        '<span class="nav2-detail-text">' + (tags || '-') + '</span> ' +
+                        '<button type="button" class="nav2-link nav4-edit-btn" data-field="tags" data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '" aria-label="编辑标签">' +
+                        '<img src="' + ICON_EDIT_URL + '" width="16" height="16" alt="" aria-hidden="true">' +
+                        '</button>' +
+                        '</td>' +
                         '<td>' + (d.device_name || '-') + '</td>' +
                         '<td>' + (d.os || '-') + '</td>' +
                         '<td><span class="nav2-status ' + statusClass + '">' + statusText + '</span></td>' +
@@ -1454,6 +1466,125 @@
                 showToast(err.message || '移除失败，请稍后重试', 'error');
             });
         }, false);
+
+        // 事件委托：地址簿详情中编辑别名和标签
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav4-edit-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const field = btn.getAttribute('data-field');
+            const guid = btn.getAttribute('data-guid');
+            const peerId = btn.getAttribute('data-peer-id');
+            const cell = btn.closest('.nav4-editable-cell');
+            if (!cell || !field || !guid || !peerId) return;
+
+            // 已经在编辑则忽略
+            if (cell.querySelector('input[type="text"]')) return;
+
+            const original = cell.getAttribute('data-original') || '';
+            startNav4InlineEdit(cell, field, guid, peerId);
+        }, false);
+
+        // 开始地址簿设备内联编辑
+        function startNav4InlineEdit(cell, field, guid, peerId) {
+            const textEl = cell.querySelector('.nav2-detail-text');
+            const editBtn = cell.querySelector('.nav4-edit-btn');
+            if (!textEl || !editBtn) return;
+
+            const original = cell.getAttribute('data-original') || '';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'nav2-input';
+            input.value = original;
+            input.style.width = '200px';
+            input.setAttribute('data-field', field);
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.type = 'button';
+            confirmBtn.className = 'nav2-link';
+            confirmBtn.setAttribute('aria-label', '确认');
+            confirmBtn.innerHTML = '<img src="' + ICON_CONFIRM_URL + '" width="16" height="16" alt="" aria-hidden="true">';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'nav2-link';
+            cancelBtn.setAttribute('aria-label', '取消');
+            cancelBtn.innerHTML = '<img src="' + ICON_CANCEL_URL + '" width="16" height="16" alt="" aria-hidden="true">';
+
+            // 保存逻辑
+            const save = () => {
+                const val = input.value.trim();
+                const csrf = getCookie('csrftoken');
+                const body = new URLSearchParams();
+                body.set('guid', guid);
+                body.set('peer_id', peerId);
+                body.set(field, val);
+
+                // 根据field调用不同的API
+                let url = '';
+                if (field === 'alias') {
+                    url = '{% url "web_personal_update_alias" %}';
+                } else if (field === 'tags') {
+                    url = '{% url "web_personal_update_tags" %}';
+                } else {
+                    showToast('未知字段', 'error');
+                    return;
+                }
+
+                fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'X-CSRFToken': csrf
+                    },
+                    body: body.toString()
+                }).then(resp => {
+                    if (!resp.ok) return parseFetchError(resp);
+                    return resp.json();
+                }).then(data => {
+                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '保存失败');
+                    cell.setAttribute('data-original', val);
+                    textEl.textContent = val || '-';
+                    cell.innerHTML = '';
+                    cell.appendChild(textEl);
+                    cell.appendChild(document.createTextNode(' '));
+                    cell.appendChild(editBtn);
+                    showToast('保存成功', 'success');
+                }).catch(err => {
+                    showToast(err.message || '保存失败', 'error');
+                });
+            };
+
+            // 取消逻辑
+            const cancel = () => {
+                cell.innerHTML = '';
+                cell.appendChild(textEl);
+                cell.appendChild(document.createTextNode(' '));
+                cell.appendChild(editBtn);
+            };
+
+            confirmBtn.addEventListener('click', save, false);
+            cancelBtn.addEventListener('click', cancel, false);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    save();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancel();
+                }
+            }, false);
+
+            cell.innerHTML = '';
+            cell.appendChild(input);
+            cell.appendChild(document.createTextNode(' '));
+            cell.appendChild(confirmBtn);
+            cell.appendChild(cancelBtn);
+            input.focus();
+            input.select();
+        }
 
         // 事件委托：nav-2 行级"添加到地址簿"操作
         contentEl.addEventListener('click', function (e) {
