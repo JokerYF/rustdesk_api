@@ -116,7 +116,7 @@ class Token(models.Model):
     uuid = models.CharField(max_length=255, verbose_name='设备UUID')
     token = models.CharField(max_length=255, verbose_name='令牌')
     client_type = models.CharField(max_length=255, verbose_name='客户端类型',
-                                   choices=[(1, 'web'), (2, 'client'), (3, 'api')], default=2)
+                                   choices=[(1, 'web'), (2, 'client'), (3, 'api')], default='client')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     last_used_at = models.DateTimeField(auto_now=True, verbose_name='最后使用时间')
 
