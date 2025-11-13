@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Home</title>
+    <title>控制台 - RustDeskApi</title>
     {% load static %}
     <link rel="stylesheet" href="/static/css/global.css">
     <link rel="stylesheet" href="/static/css/home.css">
@@ -664,6 +664,24 @@
     }
 
     /**
+     根据导航项更新页面标题
+
+     :param {string} itemKey: 导航项标识
+     :returns: 无返回值
+     :rtype: void
+     */
+    function updatePageTitle(itemKey) {
+        const titleMap = {
+            'nav-1': '首页',
+            'nav-2': '设备管理',
+            'nav-3': '用户管理',
+            'nav-4': '地址簿'
+        };
+        const pageTitle = titleMap[itemKey] || '控制台';
+        document.title = `${pageTitle} - RustDeskApi`;
+    }
+
+    /**
      处理侧边导航点击
 
      :param {MouseEvent} event: 点击事件对象
@@ -678,6 +696,7 @@
         const link = event.currentTarget;
         const key = link.dataset.key;
         activateLinkByKey(key);
+        updatePageTitle(key);
         renderContent(key);
         try {
             localStorage.setItem(STORAGE_KEY, key);
@@ -709,6 +728,7 @@
             defaultKey = firstLink ? firstLink.dataset.key : 'nav-1';
         }
         activateLinkByKey(defaultKey);
+        updatePageTitle(defaultKey);
         renderContent(defaultKey);
     }
 
