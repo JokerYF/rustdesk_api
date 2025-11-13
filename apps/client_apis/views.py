@@ -2,7 +2,6 @@ import json
 import logging
 import traceback
 
-from django.contrib.auth.models import User
 from django.http import HttpRequest, JsonResponse, HttpResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -98,8 +97,8 @@ def login(request: HttpRequest):
 
     try:
         user = UserService().get_user_by_name(username=username)
-        assert user.check_password(password)
-    except (User.DoesNotExist, AssertionError):
+        assert user and user.check_password(password)
+    except AssertionError:
         logger.error(traceback.format_exc())
         return JsonResponse({'error': '用户名或密码错误'})
 
