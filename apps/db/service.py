@@ -106,6 +106,18 @@ class UserService(BaseService):
 
         return user
 
+    def set_user_config(self, username, config_key, config_value):
+        qs = self.db.objects.filter(username=username).first()
+        qs.user_config.config_name = config_key
+        qs.user_config.config_value = config_value
+        qs.save()
+
+    def get_user_config(self, username, config_key=None):
+        qs = self.db.objects.filter(username=username).first()
+        if not config_key:
+            return qs.user_config.objects.all()
+        return qs.user_config.objects.filter(config_name=config_key).first()
+
     def get_user_by_email(self, email) -> User:
         return self.db.objects.filter(email=email).first()
 

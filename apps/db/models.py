@@ -318,3 +318,13 @@ class Alias(models.Model):
         ordering = ['-created_at']
         db_table = 'alias'
         unique_together = [['alias', 'peer_id', 'guid']]  # alias在guid中只能对一个设备进行设置
+
+
+class UserConfig(models.Model):
+    """
+    用户配置模型
+    """
+    user = models.OneToOneField(User, to_field='id', on_delete=models.CASCADE, related_name='user_config')
+    config_name = models.CharField(max_length=50, verbose_name='配置名称')
+    config_value = models.TextField(verbose_name='配置值')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
