@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 
 from apps.client_apis.common import request_debug_log
 from apps.db.models import Personal, Alias, HeartBeat, ClientTags, PeerInfo
+from apps.db.service import PersonalService, AliasService
 
 
 def is_default_personal(personal, user):
@@ -248,15 +249,15 @@ def add_device_to_personal(request: HttpRequest) -> JsonResponse:
     if not peer:
         return JsonResponse({'ok': False, 'err_msg': '设备不存在'}, status=404)
 
-    # 使用设备ID作为默认别名
-    if not alias_text:
-        alias_text = peer_id
-
     # 添加或更新别名（如果已存在则更新）
-    Alias.objects.update_or_create(
-        peer_id=peer,
-        guid=personal,
-        defaults={'alias': alias_text}
+    AliasService().set_alias(
+        guid=guid,
+        peer_id=peer_id,
+        alias=alias_text
+    )
+    PersonalService().add_peer_to_personal(
+        guid=guid,
+        peer_id=peer.peer_id,
     )
 
     return JsonResponse({'ok': True})
@@ -287,6 +288,12 @@ def remove_device_from_personal(request: HttpRequest) -> JsonResponse:
         peer_id__peer_id=peer_id,
         guid=personal
     ).delete()[0]
+
+    PersonalService().del_peer_to_personal(
+        guid=guid,
+        peer_id=peer_id,
+        user=request.user
+    )
 
     if deleted_count == 0:
         return JsonResponse({'ok': False, 'err_msg': '设备不在该地址簿中'}, status=404)
