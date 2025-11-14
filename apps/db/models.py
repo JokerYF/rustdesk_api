@@ -307,8 +307,7 @@ class Alias(models.Model):
     别名模型
     """
     alias = models.CharField(max_length=50, verbose_name='别名')
-    peer_id = models.ForeignKey(PeerInfo, to_field='id', on_delete=models.CASCADE,
-                                related_name='alias_peer_id')
+    peer_id = models.ForeignKey(PeerInfo, to_field='id', on_delete=models.CASCADE, related_name='alias_peer_id')
     guid = models.ForeignKey(Personal, to_field='guid', on_delete=models.CASCADE, related_name='alias_guid')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 

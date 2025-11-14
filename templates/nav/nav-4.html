@@ -21,15 +21,15 @@
 
 {% if personals %}
     <div class="x-scroll-container">
-        <table class="nav2-table" aria-label="地址簿列表" data-table-id="nav4-personals">
+        <table class="nav2-table" aria-label="{% trans '地址簿列表' %}" data-table-id="nav4-personals">
             <thead>
             <tr>
-                <th data-col-key="personal_name">地址簿名称</th>
+                <th data-col-key="personal_name">{% trans "地址簿名称" %}</th>
                 <!-- <th data-col-key="guid" style="width: 280px;">GUID</th> -->
-                <th data-col-key="personal_type" style="width: 100px;">类型</th>
-                <th data-col-key="device_count" style="width: 120px;">设备数量</th>
-                <th data-col-key="created_at" style="width: 200px;">创建时间</th>
-                <th data-col-key="actions" style="width: 240px;">操作</th>
+                <th data-col-key="personal_type" style="width: 100px;">{% trans "类型" %}</th>
+                <th data-col-key="device_count" style="width: 120px;">{% trans "设备数量" %}</th>
+                <th data-col-key="created_at" style="width: 200px;">{% trans "创建时间" %}</th>
+                <th data-col-key="actions" style="width: 240px;">{% trans "操作" %}</th>
             </tr>
             </thead>
             <tbody>
@@ -39,9 +39,9 @@
                     <!-- <td><code style="font-size:12px;">{{ p.guid }}</code></td> -->
                     <td>
                         {% if p.personal_type == 'public' %}
-                            <span class="nav2-status online">公开</span>
+                            <span class="nav2-status online">{% trans "公开" %}</span>
                         {% else %}
-                            <span class="nav2-status offline">私有</span>
+                            <span class="nav2-status offline">{% trans "私有" %}</span>
                         {% endif %}
                     </td>
                     <td>{{ p.device_count|default:0 }}</td>
@@ -52,20 +52,20 @@
                                     class="nav2-link nav4-row-action"
                                     data-action="view"
                                     data-guid="{{ p.guid }}"
-                                    data-name="{{ p.personal_name }}">查看
+                                    data-name="{{ p.personal_name }}">{% trans "查看" %}
                             </button>
                             {% if not p.is_default %}
                                 <button type="button"
                                         class="nav2-link nav4-row-action"
                                         data-action="rename"
                                         data-guid="{{ p.guid }}"
-                                        data-name="{{ p.personal_name }}">重命名
+                                        data-name="{{ p.personal_name }}">{% trans "重命名" %}
                                 </button>
                                 <button type="button"
                                         class="nav2-link nav4-row-action"
                                         data-action="delete"
                                         data-guid="{{ p.guid }}"
-                                        data-name="{{ p.personal_name }}">删除
+                                        data-name="{{ p.personal_name }}">{% trans "删除" %}
                                 </button>
                             {% endif %}
                         </div>
@@ -78,44 +78,45 @@
     <div class="nav2-pagination">
         <button class="nav2-btn nav4-page-btn" data-key="nav-4"
                 {% if page_obj.has_previous %}data-page="{{ page_obj.previous_page_number }}"{% else %}data-page=""
-                disabled{% endif %}>上一页
+                disabled{% endif %}>{% trans "上一页" %}
         </button>
-        <span style="color:#6a737d;">第 {{ page_obj.number }} / {{ paginator.num_pages }} 页（共 {{ paginator.count }} 条）</span>
+        <span style="color:#6a737d;">{% blocktrans with current=page_obj.number total=paginator.num_pages count=paginator.count %}
+            第 {{ current }} / {{ total }} 页（共 {{ count }} 条）{% endblocktrans %}</span>
         <button class="nav2-btn nav4-page-btn" data-key="nav-4"
                 {% if page_obj.has_next %}data-page="{{ page_obj.next_page_number }}"{% else %}data-page=""
-                disabled{% endif %}>下一页
+                disabled{% endif %}>{% trans "下一页" %}
         </button>
     </div>
 {% else %}
-    <div class="nav2-empty">暂无地址簿数据</div>
+    <div class="nav2-empty">{% trans "暂无地址簿数据" %}</div>
 {% endif %}
 
 <!-- 新建地址簿弹框 -->
 <div id="nav4-create-root" class="modal-backdrop" aria-hidden="true">
     <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="nav4-create-title">
         <div class="modal-header">
-            <h3 id="nav4-create-title" class="modal-title">新建地址簿</h3>
-            <button type="button" class="modal-close" data-close="nav4-create" aria-label="关闭">
+            <h3 id="nav4-create-title" class="modal-title">{% trans "新建地址簿" %}</h3>
+            <button type="button" class="modal-close" data-close="nav4-create" aria-label="{% trans '关闭' %}">
                 <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
         <div class="modal-body">
             <form id="nav4-create-form">
                 <div class="nav2-form-row">
-                    <label for="nav4-create-name" style="min-width:88px;color:#6a737d;">地址簿名称</label>
+                    <label for="nav4-create-name" style="min-width:88px;color:#6a737d;">{% trans "地址簿名称" %}</label>
                     <input class="nav2-input nav2-input-full" type="text" name="personal_name" id="nav4-create-name"
-                           placeholder="请输入地址簿名称" required>
+                           placeholder="{% trans '请输入地址簿名称' %}" required>
                 </div>
                 {#                <div class="nav2-form-row">#}
-                {#                    <label for="nav4-create-type" style="min-width:88px;color:#6a737d;">类型</label>#}
+                {#                    <label for="nav4-create-type" style="min-width:88px;color:#6a737d;">{% trans "类型" %}</label>#}
                 {#                    <select class="nav2-select" name="personal_type" id="nav4-create-type">#}
-                {#                        <option value="private" selected>私有</option>#}
-                {#                        <option value="public">公开</option>#}
+                {#                        <option value="private" selected>{% trans "私有" %}</option>#}
+                {#                        <option value="public">{% trans "公开" %}</option>#}
                 {#                    </select>#}
                 {#                </div>#}
                 <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button type="button" class="nav2-btn" data-close="nav4-create">取消</button>
-                    <button type="submit" class="nav2-btn nav2-primary">创建</button>
+                    <button type="button" class="nav2-btn" data-close="nav4-create">{% trans "取消" %}</button>
+                    <button type="submit" class="nav2-btn nav2-primary">{% trans "创建" %}</button>
                 </div>
             </form>
         </div>
@@ -126,8 +127,8 @@
 <div id="nav4-rename-root" class="modal-backdrop" aria-hidden="true">
     <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="nav4-rename-title">
         <div class="modal-header">
-            <h3 id="nav4-rename-title" class="modal-title">重命名地址簿</h3>
-            <button type="button" class="modal-close" data-close="nav4-rename" aria-label="关闭">
+            <h3 id="nav4-rename-title" class="modal-title">{% trans "重命名地址簿" %}</h3>
+            <button type="button" class="modal-close" data-close="nav4-rename" aria-label="{% trans '关闭' %}">
                 <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
@@ -135,13 +136,13 @@
             <form id="nav4-rename-form">
                 <input type="hidden" name="guid" id="nav4-rename-guid">
                 <div class="nav2-form-row">
-                    <label for="nav4-rename-name" style="min-width:88px;color:#6a737d;">新名称</label>
+                    <label for="nav4-rename-name" style="min-width:88px;color:#6a737d;">{% trans "新名称" %}</label>
                     <input class="nav2-input nav2-input-full" type="text" name="new_name" id="nav4-rename-name"
-                           placeholder="请输入新名称" required>
+                           placeholder="{% trans '请输入新名称' %}" required>
                 </div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button type="button" class="nav2-btn" data-close="nav4-rename">取消</button>
-                    <button type="submit" class="nav2-btn nav2-primary">保存</button>
+                    <button type="button" class="nav2-btn" data-close="nav4-rename">{% trans "取消" %}</button>
+                    <button type="submit" class="nav2-btn nav2-primary">{% trans "保存" %}</button>
                 </div>
             </form>
         </div>
@@ -152,8 +153,8 @@
 <div id="nav4-detail-root" class="modal-backdrop" aria-hidden="true">
     <div class="modal modal--lg" role="dialog" aria-modal="true" aria-labelledby="nav4-detail-title">
         <div class="modal-header">
-            <h3 id="nav4-detail-title" class="modal-title">地址簿详情</h3>
-            <button type="button" class="modal-close" data-close="nav4-detail" aria-label="关闭">
+            <h3 id="nav4-detail-title" class="modal-title">{% trans "地址簿详情" %}</h3>
+            <button type="button" class="modal-close" data-close="nav4-detail" aria-label="{% trans '关闭' %}">
                 <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
@@ -167,8 +168,8 @@
 <div id="nav4-add-device-root" class="modal-backdrop" aria-hidden="true">
     <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="nav4-add-device-title">
         <div class="modal-header">
-            <h3 id="nav4-add-device-title" class="modal-title">添加设备到地址簿</h3>
-            <button type="button" class="modal-close" data-close="nav4-add-device" aria-label="关闭">
+            <h3 id="nav4-add-device-title" class="modal-title">{% trans "添加设备到地址簿" %}</h3>
+            <button type="button" class="modal-close" data-close="nav4-add-device" aria-label="{% trans '关闭' %}">
                 <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
@@ -177,17 +178,18 @@
                 <input type="hidden" name="guid" id="nav4-add-device-guid">
                 <input type="hidden" name="peer_id" id="nav4-add-device-peer-id">
                 <div class="nav2-form-row">
-                    <label style="min-width:88px;color:#6a737d;">设备ID</label>
+                    <label style="min-width:88px;color:#6a737d;">{% trans "设备ID" %}</label>
                     <span id="nav4-add-device-peer-id-display" style="color:#24292e;"></span>
                 </div>
                 <div class="nav2-form-row">
-                    <label for="nav4-add-device-alias" style="min-width:88px;color:#6a737d;">设备别名</label>
+                    <label for="nav4-add-device-alias"
+                           style="min-width:88px;color:#6a737d;">{% trans "设备别名" %}</label>
                     <input class="nav2-input nav2-input-full" type="text" name="alias" id="nav4-add-device-alias"
-                           placeholder="请输入设备别名(可选)">
+                           placeholder="{% trans '请输入设备别名(可选)' %}">
                 </div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button type="button" class="nav2-btn" data-close="nav4-add-device">取消</button>
-                    <button type="submit" class="nav2-btn nav2-primary">添加</button>
+                    <button type="button" class="nav2-btn" data-close="nav4-add-device">{% trans "取消" %}</button>
+                    <button type="submit" class="nav2-btn nav2-primary">{% trans "添加" %}</button>
                 </div>
             </form>
         </div>

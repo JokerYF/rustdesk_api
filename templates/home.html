@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+{% load i18n %}
+{% load static %}
+<html lang="{% get_current_language as LANGUAGE_CODE %}{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>控制台 - RustDeskApi</title>
-    {% load static %}
+    <title>{% trans "控制台" %} - RustDeskApi</title>
     <link rel="stylesheet" href="/static/css/global.css">
     <link rel="stylesheet" href="/static/css/home.css">
     <link rel="stylesheet" href="/static/css/nav1.css">
@@ -60,28 +61,28 @@
 </head>
 <body>
 <header class="header">
-    <div class="title">控制台</div>
+    <div class="title">{% trans "控制台" %}</div>
     <div class="user-actions">
-        <span>欢迎，{{ username }}！</span>
-        <a href="{% url 'web_logout' %}">退出登录</a>
+        <span>{% blocktrans with username=username %}欢迎，{{ username }}！{% endblocktrans %}</span>
+        <a href="{% url 'web_logout' %}">{% trans "退出登录" %}</a>
     </div>
     {% comment %} 可在此处扩展全局搜索或通知入口 {% endcomment %}
 </header>
 <div class="layout">
-    <aside class="sidebar" role="navigation" aria-label="侧边导航">
-        <div class="brand">导航</div>
+    <aside class="sidebar" role="navigation" aria-label="{% trans '侧边导航' %}">
+        <div class="brand">{% trans "导航" %}</div>
         <nav>
             <ul class="nav">
-                <li><a href="#" data-key="nav-1">首页</a></li>
-                <li><a href="#" data-key="nav-2">设备管理</a></li>
-                <li><a href="#" data-key="nav-3">用户管理</a></li>
-                <li><a href="#" data-key="nav-4">地址簿</a></li>
+                <li><a href="#" data-key="nav-1">{% trans "首页" %}</a></li>
+                <li><a href="#" data-key="nav-2">{% trans "设备管理" %}</a></li>
+                <li><a href="#" data-key="nav-3">{% trans "用户管理" %}</a></li>
+                <li><a href="#" data-key="nav-4">{% trans "地址簿" %}</a></li>
             </ul>
         </nav>
     </aside>
     <main id="content" class="content" role="main" aria-live="polite" aria-busy="false">
         <!-- 右侧默认留空 -->
-        <div class="content-empty" id="empty-hint">请选择左侧的一个导航项以查看内容</div>
+        <div class="content-empty" id="empty-hint">{% trans "请选择左侧的一个导航项以查看内容" %}</div>
     </main>
 </div>
 <script>
@@ -90,6 +91,78 @@
 
      :const STORAGE_KEY: 在本地存储中保存选中导航键名的键
      */
+        // 多语言常量
+    const i18n = {
+            errorOccurred: "{% trans '发生错误' %}",
+            loading: "{% trans '加载中...' %}",
+            loadFailed: "{% trans '加载失败，请稍后重试' %}",
+            online: "{% trans '在线' %}",
+            offline: "{% trans '离线' %}",
+            deviceId: "{% trans '设备ID' %}",
+            username: "{% trans '用户名' %}",
+            hostname: "{% trans '主机名' %}",
+            deviceAlias: "{% trans '设备别名' %}",
+            deviceTags: "{% trans '设备标签' %}",
+            platform: "{% trans '平台' %}",
+            editAlias: "{% trans '编辑别名' %}",
+            editTags: "{% trans '编辑标签' %}",
+            edit: "{% trans '编辑' %}",
+            confirm: "{% trans '确认' %}",
+            cancel: "{% trans '取消' %}",
+            requestFailed: "{% trans '请求失败' %}",
+            saveFailed: "{% trans '保存失败' %}",
+            saveSuccess: "{% trans '保存成功' %}",
+            deleteFailed: "{% trans '删除失败' %}",
+            deleteSuccess: "{% trans '删除成功' %}",
+            createFailed: "{% trans '创建失败' %}",
+            createSuccess: "{% trans '用户创建成功' %}",
+            renameFailed: "{% trans '重命名失败' %}",
+            renameSuccess: "{% trans '重命名成功' %}",
+            resetFailed: "{% trans '重置失败' %}",
+            invalidAlias: "{% trans '请输入有效的别名' %}",
+            enterCompletInfo: "{% trans '请输入完整信息' %}",
+            passwordMismatch: "{% trans '两次密码不一致' %}",
+            invalidUsername: "{% trans '用户名无效' %}",
+            usernamePasswordRequired: "{% trans '用户名和密码不能为空' %}",
+            passwordMinLength: "{% trans '密码长度至少为6位' %}",
+            enterAddressBookName: "{% trans '请输入地址簿名称' %}",
+            selectAddressBook: "{% trans '请选择地址簿' %}",
+            addFailed: "{% trans '添加失败' %}",
+            addSuccess: "{% trans '添加成功' %}",
+            removeFailed: "{% trans '移除失败' %}",
+            removeSuccess: "{% trans '移除成功' %}",
+            noAvailableAddressBook: "{% trans '暂无可用地址簿，请先创建地址簿' %}",
+            getAddressBookListFailed: "{% trans '获取地址簿列表失败，请稍后重试' %}",
+            confirmDeleteUser: "{% trans '确定要删除用户' %}",
+            deleteUserTip: "{% trans '吗？删除后该用户将无法登录。' %}",
+            confirmDeleteAddressBook: "{% trans '确定要删除地址簿' %}",
+            deleteAddressBookTip: "{% trans '吗？删除后将无法恢复。' %}",
+            confirmRemoveDevice: "{% trans '确定要从地址簿中移除该设备吗？' %}",
+            enterNewName: "{% trans '请输入新名称' %}",
+            unknownField: "{% trans '未知字段' %}",
+            enterAliasPlaceholder: "{% trans '请输入设备别名' %}",
+            enterTagsPlaceholder: "{% trans '用逗号分隔多个标签' %}",
+            noDevices: "{% trans '暂无设备' %}",
+            addressBookName: "{% trans '地址簿名称' %}",
+            type: "{% trans '类型' %}",
+            deviceCount: "{% trans '设备数量' %}",
+            createdAt: "{% trans '创建时间' %}",
+            publicType: "{% trans '公开' %}",
+            privateType: "{% trans '私有' %}",
+            deviceName: "{% trans '设备名' %}",
+            system: "{% trans '系统' %}",
+            status: "{% trans '状态' %}",
+            operation: "{% trans '操作' %}",
+            remove: "{% trans '移除' %}",
+            alias: "{% trans '别名' %}",
+            tags: "{% trans '标签' %}",
+            // 页面标题相关
+            homePage: "{% trans '首页' %}",
+            deviceManagement: "{% trans '设备管理' %}",
+            userManagement: "{% trans '用户管理' %}",
+            addressBook: "{% trans '地址簿' %}",
+            console: "{% trans '控制台' %}",
+        };
     const STORAGE_KEY = 'homeActiveNavKey';
     const NAV_CONTENT_URL = "{% url 'web_nav_content' %}";
     const RENAME_ALIAS_URL = "{% url 'web_rename_alias' %}";
@@ -129,7 +202,7 @@
         const div = document.createElement('div');
         const kind = (type === 'success' || type === 'info') ? type : 'error';
         div.className = `toast toast--${kind}`;
-        div.textContent = message || '发生错误';
+        div.textContent = message || i18n.errorOccurred;
         container.appendChild(div);
         // 下一帧展示动画
         requestAnimationFrame(() => div.classList.add('toast--show'));
@@ -140,7 +213,8 @@
     }
 
     // 文本解码（URL 解码、HTML 实体解码），避免展示原始 JSON/转义串
-    function decodeMessage(raw, fallbackText = '发生错误') {
+    function decodeMessage(raw, fallbackText = null) {
+        fallbackText = fallbackText || i18n.errorOccurred;
         let msg = String(raw || '').trim();
         if (!msg) return fallbackText;
         // 若是 JSON 字符串，尝试提取常见的 message 字段
@@ -222,7 +296,7 @@
             const isOnline = !!(statusMap[pid] && statusMap[pid].is_online);
             el.classList.toggle('online', isOnline);
             el.classList.toggle('offline', !isOnline);
-            el.textContent = isOnline ? '在线' : '离线';
+            el.textContent = isOnline ? i18n.online : i18n.offline;
         });
     }
 
@@ -383,7 +457,7 @@
             // 切换/加载后，根据导航项决定是否开启 nav-2 自动刷新
             toggleNav2AutoRefresh(itemKey === 'nav-2');
         }).catch(() => {
-            content.innerHTML = '<p class="content-empty">加载失败，请稍后重试</p>';
+            content.innerHTML = '<p class="content-empty">' + i18n.loadFailed + '</p>';
         }).finally(() => {
             content.setAttribute('aria-busy', 'false');
         });
@@ -486,7 +560,7 @@
      */
     function fetchAndShowNav2Detail(peerId) {
         const bodyEl = document.getElementById('nav2-modal-body');
-        if (bodyEl) bodyEl.innerHTML = '<div style="color:#6a737d;">加载中...</div>';
+        if (bodyEl) bodyEl.innerHTML = '<div style="color:#6a737d;">' + i18n.loading + '</div>';
         openModalById('nav2-modal-root');
         const params = new URLSearchParams({peer_id: peerId});
         fetch(`${DEVICE_DETAIL_URL}?${params.toString()}`, {
@@ -494,14 +568,14 @@
             credentials: 'same-origin',
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         }).then(resp => {
-            if (!resp.ok) throw new Error('请求失败');
+            if (!resp.ok) throw new Error(i18n.requestFailed);
             return resp.json();
         }).then(data => {
-            if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '加载失败');
+            if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.loadFailed);
             const html = renderNav2DetailHTML(data.data || {});
             if (bodyEl) bodyEl.innerHTML = html;
         }).catch(err => {
-            if (bodyEl) bodyEl.innerHTML = '<div style="color:#b91c1c;">' + (err.message || '加载失败') + '</div>';
+            if (bodyEl) bodyEl.innerHTML = '<div style="color:#b91c1c;">' + (err.message || i18n.loadFailed) + '</div>';
         });
     }
 
@@ -515,7 +589,7 @@
      :rtype: void
      */
     function startNav2InlineEdit(containerEl, field, peerId) {
-        const placeholder = field === 'alias' ? '请输入设备别名' : '用逗号分隔多个标签';
+        const placeholder = field === 'alias' ? i18n.enterAliasPlaceholder : i18n.enterTagsPlaceholder;
         const isInlineCell = containerEl.hasAttribute('data-inline-field');
         const original = containerEl.getAttribute('data-original')
             || (containerEl.querySelector('.nav2-detail-text')?.textContent || '')
@@ -674,12 +748,12 @@
      */
     function updatePageTitle(itemKey) {
         const titleMap = {
-            'nav-1': '首页',
-            'nav-2': '设备管理',
-            'nav-3': '用户管理',
-            'nav-4': '地址簿'
+            'nav-1': i18n.homePage || '首页',
+            'nav-2': i18n.deviceManagement || '设备管理',
+            'nav-3': i18n.userManagement || '用户管理',
+            'nav-4': i18n.addressBook || '地址簿'
         };
-        const pageTitle = titleMap[itemKey] || '控制台';
+        const pageTitle = titleMap[itemKey] || i18n.console || '控制台';
         document.title = `${pageTitle} - RustDeskApi`;
     }
 
@@ -868,7 +942,7 @@
                 if (p2) p2.value = '';
                 openModalById('nav3-reset-root');
             } else if (action === 'delete') {
-                if (!confirm(`确定要删除用户"${username}"吗？删除后该用户将无法登录。`)) return;
+                if (!confirm(`${i18n.confirmDeleteUser}"${username}"${i18n.deleteUserTip}`)) return;
                 const csrf = getCookie('csrftoken');
                 const body = new URLSearchParams();
                 body.set('username', username);
@@ -885,8 +959,8 @@
                     if (!resp.ok) return parseFetchError(resp);
                     return resp.json();
                 }).then(data => {
-                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '删除失败');
-                    showToast('删除成功', 'success');
+                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.deleteFailed);
+                    showToast(i18n.deleteSuccess, 'success');
                     const extra = collectNav3QueryOptions(document.getElementById('nav3-search-form'));
                     renderContent('nav-3', extra);
                     try {
@@ -909,7 +983,7 @@
             const email = (fd.get('email') || '').trim();
             const isStaff = formEl.querySelector('#nav3-edit-is-staff')?.checked ? '1' : '0';
             if (!username) {
-                showToast('用户名无效', 'error');
+                showToast(i18n.invalidUsername, 'error');
                 return;
             }
             const csrf = getCookie('csrftoken');
@@ -953,11 +1027,11 @@
             const p1 = (fd.get('password1') || '').trim();
             const p2 = (fd.get('password2') || '').trim();
             if (!username || !p1 || !p2) {
-                showToast('请输入完整信息', 'error');
+                showToast(i18n.enterCompletInfo, 'error');
                 return;
             }
             if (p1 !== p2) {
-                showToast('两次密码不一致', 'error');
+                showToast(i18n.passwordMismatch, 'error');
                 return;
             }
             const csrf = getCookie('csrftoken');
@@ -1013,15 +1087,15 @@
             const p2 = (fd.get('password2') || '').trim();
             const isStaff = formEl.querySelector('#nav3-create-is-staff')?.checked ? '1' : '0';
             if (!username || !p1 || !p2) {
-                showToast('用户名和密码不能为空', 'error');
+                showToast(i18n.usernamePasswordRequired, 'error');
                 return;
             }
             if (p1 !== p2) {
-                showToast('两次密码不一致', 'error');
+                showToast(i18n.passwordMismatch, 'error');
                 return;
             }
             if (p1.length < 6) {
-                showToast('密码长度至少为6位', 'error');
+                showToast(i18n.passwordMinLength, 'error');
                 return;
             }
             const csrf = getCookie('csrftoken');
@@ -1045,8 +1119,8 @@
                 if (!resp.ok) return parseFetchError(resp);
                 return resp.json();
             }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '创建失败');
-                showToast('用户创建成功', 'success');
+                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.createFailed);
+                showToast(i18n.createSuccess, 'success');
                 closeModalById('nav3-create-root');
                 const extra = collectNav3QueryOptions(document.getElementById('nav3-search-form'));
                 renderContent('nav-3', extra);
@@ -1220,7 +1294,7 @@
             const peerId = (fd.get('peer_id') || '').trim();
             const alias = (fd.get('alias') || '').trim();
             if (!peerId || !alias) {
-                showToast('请输入有效的别名', 'error');
+                showToast(i18n.invalidAlias, 'error');
                 return;
             }
             const csrf = getCookie('csrftoken');
@@ -1352,7 +1426,7 @@
             const personalName = (fd.get('personal_name') || '').trim();
             const personalType = (fd.get('personal_type') || '').trim();
             if (!personalName) {
-                showToast('请输入地址簿名称', 'error');
+                showToast(i18n.enterAddressBookName, 'error');
                 return;
             }
             const csrf = getCookie('csrftoken');
@@ -1372,17 +1446,17 @@
                 if (!resp.ok) return parseFetchError(resp);
                 return resp.json();
             }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '创建失败');
+                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.createFailed);
                 closeModalById('nav4-create-root');
                 const extra = collectNav4QueryOptions(document.getElementById('nav4-search-form'));
                 renderContent('nav-4', extra);
-                showToast('创建成功', 'success');
+                showToast(i18n.createSuccess, 'success');
                 try {
                     localStorage.setItem(STORAGE_KEY, 'nav-4');
                 } catch (e) {
                 }
             }).catch(err => {
-                showToast(err.message || '创建失败，请稍后重试', 'error');
+                showToast(err.message || i18n.createFailed, 'error');
             });
         }, false);
 
@@ -1410,7 +1484,7 @@
                 }
                 openModalById('nav4-rename-root');
             } else if (action === 'delete') {
-                if (!confirm(`确定要删除地址簿"${name}"吗？删除后将无法恢复。`)) return;
+                if (!confirm(`${i18n.confirmDeleteAddressBook}"${name}"${i18n.deleteAddressBookTip}`)) return;
                 const csrf = getCookie('csrftoken');
                 const body = new URLSearchParams();
                 body.set('guid', guid);
@@ -1427,16 +1501,16 @@
                     if (!resp.ok) return parseFetchError(resp);
                     return resp.json();
                 }).then(data => {
-                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '删除失败');
+                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.deleteFailed);
                     const extra = collectNav4QueryOptions(document.getElementById('nav4-search-form'));
                     renderContent('nav-4', extra);
-                    showToast('删除成功', 'success');
+                    showToast(i18n.deleteSuccess, 'success');
                     try {
                         localStorage.setItem(STORAGE_KEY, 'nav-4');
                     } catch (e) {
                     }
                 }).catch(err => {
-                    showToast(err.message || '删除失败，请稍后重试', 'error');
+                    showToast(err.message || i18n.deleteFailed, 'error');
                 });
             }
         }, false);
@@ -1450,7 +1524,7 @@
             const guid = (fd.get('guid') || '').trim();
             const newName = (fd.get('new_name') || '').trim();
             if (!guid || !newName) {
-                showToast('请输入新名称', 'error');
+                showToast(i18n.enterNewName, 'error');
                 return;
             }
             const csrf = getCookie('csrftoken');
@@ -1470,24 +1544,24 @@
                 if (!resp.ok) return parseFetchError(resp);
                 return resp.json();
             }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '重命名失败');
+                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.renameFailed);
                 closeModalById('nav4-rename-root');
                 const extra = collectNav4QueryOptions(document.getElementById('nav4-search-form'));
                 renderContent('nav-4', extra);
-                showToast('重命名成功', 'success');
+                showToast(i18n.renameSuccess, 'success');
                 try {
                     localStorage.setItem(STORAGE_KEY, 'nav-4');
                 } catch (e) {
                 }
             }).catch(err => {
-                showToast(err.message || '重命名失败，请稍后重试', 'error');
+                showToast(err.message || i18n.renameFailed, 'error');
             });
         }, false);
 
         // 获取并展示 nav-4 地址簿详情
         function fetchAndShowNav4Detail(guid) {
             const bodyEl = document.getElementById('nav4-detail-body');
-            if (bodyEl) bodyEl.innerHTML = '<div style="color:#6a737d;">加载中...</div>';
+            if (bodyEl) bodyEl.innerHTML = '<div style="color:#6a737d;">' + i18n.loading + '</div>';
             openModalById('nav4-detail-root');
             const params = new URLSearchParams({guid: guid});
             fetch(`${PERSONAL_DETAIL_URL}?${params.toString()}`, {
@@ -1495,14 +1569,14 @@
                 credentials: 'same-origin',
                 headers: {'X-Requested-With': 'XMLHttpRequest'}
             }).then(resp => {
-                if (!resp.ok) throw new Error('请求失败');
+                if (!resp.ok) throw new Error(i18n.requestFailed);
                 return resp.json();
             }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '加载失败');
+                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.loadFailed);
                 const html = renderNav4DetailHTML(data.data || {});
                 if (bodyEl) bodyEl.innerHTML = html;
             }).catch(err => {
-                if (bodyEl) bodyEl.innerHTML = '<div style="color:#b91c1c;">' + (err.message || '加载失败') + '</div>';
+                if (bodyEl) bodyEl.innerHTML = '<div style="color:#b91c1c;">' + (err.message || i18n.loadFailed) + '</div>';
             });
         }
 
@@ -1563,7 +1637,7 @@
             const guid = btn.getAttribute('data-guid') || '';
             const peerId = btn.getAttribute('data-peer-id') || '';
             if (!guid || !peerId) return;
-            if (!confirm('确定要从地址簿中移除该设备吗？')) return;
+            if (!confirm(i18n.confirmRemoveDevice)) return;
             const csrf = getCookie('csrftoken');
             const body = new URLSearchParams();
             body.set('guid', guid);
@@ -1581,12 +1655,12 @@
                 if (!resp.ok) return parseFetchError(resp);
                 return resp.json();
             }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '移除失败');
+                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.removeFailed);
                 // 刷新详情弹窗
                 fetchAndShowNav4Detail(guid);
-                showToast('移除成功', 'success');
+                showToast(i18n.removeSuccess, 'success');
             }).catch(err => {
-                showToast(err.message || '移除失败，请稍后重试', 'error');
+                showToast(err.message || i18n.removeFailed, 'error');
             });
         }, false);
 
@@ -1650,7 +1724,7 @@
                 } else if (field === 'tags') {
                     url = '{% url "web_personal_update_tags" %}';
                 } else {
-                    showToast('未知字段', 'error');
+                    showToast(i18n.unknownField, 'error');
                     return;
                 }
 
@@ -1667,16 +1741,16 @@
                     if (!resp.ok) return parseFetchError(resp);
                     return resp.json();
                 }).then(data => {
-                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '保存失败');
+                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.saveFailed);
                     cell.setAttribute('data-original', val);
                     textEl.textContent = val || '-';
                     cell.innerHTML = '';
                     cell.appendChild(textEl);
                     cell.appendChild(document.createTextNode(' '));
                     cell.appendChild(editBtn);
-                    showToast('保存成功', 'success');
+                    showToast(i18n.saveSuccess, 'success');
                 }).catch(err => {
-                    showToast(err.message || '保存失败', 'error');
+                    showToast(err.message || i18n.saveFailed, 'error');
                 });
             };
 
@@ -1733,18 +1807,18 @@
                 if (!resp.ok) return parseFetchError(resp);
                 return resp.json();
             }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '获取地址簿列表失败');
+                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.getAddressBookListFailed);
                 const personals = data.data || [];
 
                 if (personals.length === 0) {
-                    showToast('暂无可用地址簿，请先创建地址簿', 'info');
+                    showToast(i18n.noAvailableAddressBook, 'info');
                     return;
                 }
 
                 // 填充下拉选项
                 const select = document.getElementById('nav2-add-to-book-guid');
                 // 清空选项，但保留默认的占位符option
-                select.innerHTML = '<option value="" disabled selected hidden>请选择地址簿</option>';
+                select.innerHTML = '<option value="" disabled selected hidden>' + i18n.selectAddressBook + '</option>';
                 personals.forEach(p => {
                     const option = document.createElement('option');
                     option.value = p.guid;
@@ -1760,7 +1834,7 @@
                 // 显示弹框
                 openModalById('nav2-add-to-book-root');
             }).catch(err => {
-                showToast(err.message || '获取地址簿列表失败，请稍后重试', 'error');
+                showToast(err.message || i18n.getAddressBookListFailed, 'error');
             });
         }
 
@@ -1774,7 +1848,7 @@
                 const alias = document.getElementById('nav2-add-to-book-alias').value.trim();
 
                 if (!guid) {
-                    showToast('请选择地址簿', 'error');
+                    showToast(i18n.selectAddressBook, 'error');
                     return;
                 }
 
@@ -1799,11 +1873,11 @@
                     if (!resp.ok) return parseFetchError(resp);
                     return resp.json();
                 }).then(data => {
-                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '添加失败');
-                    showToast('添加成功', 'success');
+                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || i18n.addFailed);
+                    showToast(i18n.addSuccess, 'success');
                     closeModalById('nav2-add-to-book-root');
                 }).catch(err => {
-                    showToast(err.message || '添加失败，请稍后重试', 'error');
+                    showToast(err.message || i18n.addFailed, 'error');
                 });
             });
         }
@@ -1815,8 +1889,8 @@
 <div id="nav2-add-to-book-root" class="modal-backdrop" aria-hidden="true">
     <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="nav2-add-to-book-title">
         <div class="modal-header">
-            <h3 id="nav2-add-to-book-title" class="modal-title">添加设备到地址簿</h3>
-            <button type="button" class="modal-close" data-close="nav2-add-to-book" aria-label="关闭">
+            <h3 id="nav2-add-to-book-title" class="modal-title">{% trans "添加设备到地址簿" %}</h3>
+            <button type="button" class="modal-close" data-close="nav2-add-to-book" aria-label="{% trans '关闭' %}">
                 <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
@@ -1824,23 +1898,25 @@
             <form id="nav2-add-to-book-form">
                 <input type="hidden" name="peer_id" id="nav2-add-to-book-peer-id">
                 <div class="nav2-form-row">
-                    <label style="min-width:88px;color:#6a737d;">设备ID</label>
+                    <label style="min-width:88px;color:#6a737d;">{% trans "设备ID" %}</label>
                     <span id="nav2-add-to-book-peer-id-display" style="color:#24292e;"></span>
                 </div>
                 <div class="nav2-form-row">
-                    <label for="nav2-add-to-book-guid" style="min-width:88px;color:#6a737d;">选择地址簿</label>
+                    <label for="nav2-add-to-book-guid"
+                           style="min-width:88px;color:#6a737d;">{% trans "选择地址簿" %}</label>
                     <select class="nav2-select" name="guid" id="nav2-add-to-book-guid" required style="flex:1;">
-                        <option value="" disabled selected hidden>请选择地址簿</option>
+                        <option value="" disabled selected hidden>{% trans "请选择地址簿" %}</option>
                     </select>
                 </div>
                 <div class="nav2-form-row">
-                    <label for="nav2-add-to-book-alias" style="min-width:88px;color:#6a737d;">设备别名</label>
+                    <label for="nav2-add-to-book-alias"
+                           style="min-width:88px;color:#6a737d;">{% trans "设备别名" %}</label>
                     <input class="nav2-input nav2-input-full" type="text" name="alias" id="nav2-add-to-book-alias"
-                           placeholder="请输入设备别名(可选)">
+                           placeholder="{% trans '请输入设备别名(可选)' %}">
                 </div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button type="button" class="nav2-btn" data-close="nav2-add-to-book">取消</button>
-                    <button type="submit" class="nav2-btn nav2-primary">添加</button>
+                    <button type="button" class="nav2-btn" data-close="nav2-add-to-book">{% trans "取消" %}</button>
+                    <button type="submit" class="nav2-btn nav2-primary">{% trans "添加" %}</button>
                 </div>
             </form>
         </div>

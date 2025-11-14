@@ -61,6 +61,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'apps.common.middleware.OptOutSessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',  # 添加语言中间件
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -124,11 +125,23 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'zh-hans'  # 简体中文
+LANGUAGE_CODE = 'zh-hans'  # 默认语言：简体中文
+
+# 支持的语言列表
+LANGUAGES = [
+    ('zh-hans', '简体中文'),
+    ('en', 'English'),
+]
+
+# 翻译文件路径
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 TIME_ZONE = 'Asia/Shanghai'  # 使用服务器本地时区
 
 USE_I18N = True
+USE_L10N = True
 USE_TZ = True  # 使用本地化时间
 
 # Static files (CSS, JavaScript, Images)

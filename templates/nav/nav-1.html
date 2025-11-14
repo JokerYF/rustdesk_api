@@ -1,30 +1,31 @@
 <!-- 样式由宿主页 head 的静态 CSS 提供 -->
+{% load i18n %}
 
-<div class="nav1-section-title">总览</div>
+<div class="nav1-section-title">{% trans "总览" %}</div>
 <div class="nav1-stats">
     <div class="nav1-card">
-        <div class="nav1-card-title">用户数</div>
+        <div class="nav1-card-title">{% trans "用户数" %}</div>
         <div class="nav1-card-value">{{ user_count|default:0 }}</div>
     </div>
     <div class="nav1-card">
-        <div class="nav1-card-title">设备数</div>
+        <div class="nav1-card-title">{% trans "设备数" %}</div>
         <div class="nav1-card-value">{{ device_count|default:0 }}</div>
     </div>
     {# 可在此扩展更多统计卡片，如在线设备数、分组数等 #}
 </div>
 
-<div class="nav1-section-title">设备列表</div>
+<div class="nav1-section-title">{% trans "设备列表" %}</div>
 {% if devices %}
     <div class="x-scroll-container">
-        <table class="nav1-table resizable-table" aria-label="设备列表" data-table-id="nav1-devices">
+        <table class="nav1-table resizable-table" aria-label="{% trans '设备列表' %}" data-table-id="nav1-devices">
         <thead>
         <tr>
-            <th data-col-key="idx" style="width: 64px;">序号</th>
-            <th data-col-key="peer_id">设备ID</th>
-            <th data-col-key="device_name">设备名</th>
-            <th data-col-key="os">系统</th>
-            <th data-col-key="version">版本</th>
-            <th data-col-key="created_at" style="width: 200px;">创建时间</th>
+            <th data-col-key="idx" style="width: 64px;">{% trans "序号" %}</th>
+            <th data-col-key="peer_id">{% trans "设备ID" %}</th>
+            <th data-col-key="device_name">{% trans "设备名" %}</th>
+            <th data-col-key="os">{% trans "系统" %}</th>
+            <th data-col-key="version">{% trans "版本" %}</th>
+            <th data-col-key="created_at" style="width: 200px;">{% trans "创建时间" %}</th>
         </tr>
         </thead>
         <tbody>
@@ -44,16 +45,18 @@
     <div class="nav1-pagination" style="display:flex;align-items:center;gap:10px;margin-top:12px;">
         <button class="nav1-page-btn" data-key="nav-1"
                 {% if page_obj.has_previous %}data-page="{{ page_obj.previous_page_number }}"{% else %}data-page=""
-                disabled{% endif %}>上一页
+                disabled{% endif %}>{% trans "上一页" %}
         </button>
-        <span style="color:#6a737d;">第 {{ page_obj.number }} / {{ paginator.num_pages }} 页（共 {{ paginator.count }} 条）</span>
+        <span style="color:#6a737d;">{% blocktrans with current=page_obj.number total=paginator.num_pages count=paginator.count %}
+            第 {{ current }} / {{ total }} 页（共 {{ count }} 条）{% endblocktrans %}</span>
         <button class="nav1-page-btn" data-key="nav-1"
                 {% if page_obj.has_next %}data-page="{{ page_obj.next_page_number }}"{% else %}data-page=""
-                disabled{% endif %}>下一页
+                disabled{% endif %}>{% trans "下一页" %}
         </button>
     </div>
 {% else %}
-    <div class="nav1-empty">暂无设备数据</div>
+    <div class="nav1-empty">{% trans "暂无设备数据" %}</div>
 {% endif %}
+
 
 
