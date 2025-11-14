@@ -67,8 +67,14 @@ class UserService(BaseService):
         except self.db.DoesNotExist:
             return None
 
-    def get_users(self, *users):
-        return self.db.objects.filter(username__in=[*users]).all()
+    def get_users(self, *users, is_active=True):
+        _filter = {
+            'username__in': [*users],
+            'is_active': is_active
+        }
+        if is_active is None:  # 管理员查询时，如果为None，则可以拉取全部信息
+            _filter.pop('is_active')
+        return self.db.objects.filter(**_filter).all()
 
     def create_user(
             self,
@@ -77,6 +83,7 @@ class UserService(BaseService):
             email="",
             is_superuser=False,
             is_staff=False,
+            is_active=True,
             group: str | Group = None,
     ) -> User:
         user = self.db.objects.create_user(
@@ -84,6 +91,7 @@ class UserService(BaseService):
             email=email,
             is_superuser=is_superuser,
             is_staff=is_staff,
+            is_active=is_active,
         )
         user.set_password(password)
         user.save()
@@ -120,6 +128,10 @@ class UserService(BaseService):
         logger.info(f"设置用户密码: {user}")
         return user
 
+    def delete_user(self, *usernames):
+        self.db.objects.filter(username__in=[*usernames]).update(is_active=False)
+        logger.info(f"删除用户: {usernames}")
+
     def __get_list(self, **kwargs):
         """
         通用分页查询方法
@@ -134,6 +146,9 @@ class UserService(BaseService):
         page_size = int(kwargs.pop("page_size", 10))
 
         filters = kwargs.pop("filters", {})
+        is_active = kwargs.pop("is_active", True)
+        if is_active is not None:
+            filters.update(is_active=is_active)
         queryset = self.db.objects.filter(**filters)
 
         if ordering := kwargs.pop("ordering", []):
@@ -150,8 +165,8 @@ class UserService(BaseService):
             "total_pages": (total + page_size - 1) // page_size,
         }
 
-    def get_list_by_status(self, status, page=1, page_size=10):
-        return self.__get_list(status=status, page=page, page_size=page_size)
+    def get_list_by_status(self, is_active, page=1, page_size=10):
+        return self.__get_list(is_active=is_active, page=page, page_size=page_size)
 
     def get_user_by_id(self, user_id) -> User:
         return self.db.objects.filter(id=user_id).first()

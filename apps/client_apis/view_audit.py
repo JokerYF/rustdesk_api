@@ -7,8 +7,8 @@ from apps.client_apis.common import request_debug_log
 from apps.db.service import AuditConnService
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 def audit_conn(request: HttpRequest):
     """
     连接日志
@@ -43,8 +43,8 @@ def audit_conn(request: HttpRequest):
     return HttpResponse(status=200)
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 def audit_file(request):
     """
     文件日志

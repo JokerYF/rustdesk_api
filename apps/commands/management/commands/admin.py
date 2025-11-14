@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand
 
 from apps.db.service import UserService, GroupService, TokenService, PersonalService
 from common.error import UserNotFoundError
+from common.utils import str2bool
 
 
 class Command(BaseCommand):
@@ -47,6 +48,12 @@ class Command(BaseCommand):
             help='创建一个地址簿',
         )
 
+        parser.add_argument(
+            '--is-admin',
+            type=str,
+            help='是否为管理员',
+        )
+
     def handle(self, *args, **options):
         """处理命令逻辑。
 
@@ -67,21 +74,33 @@ class Command(BaseCommand):
             else:
                 print('管理员账号已存在')
 
-        elif options.get('user') and options.get('passwd'):
+        elif options.get('user'):
             username = options.get('user')
             password = options.get('passwd')
+            is_admin = str2bool(options.get('is_admin') or False)
 
             try:
-                user = self.user_service.set_password(password=password, username=username)
-                TokenService().delete_token_by_user(user.username)
-                print(f'用户 {username} 已存在，已更新密码 {password}')
+                if password:
+                    user = self.user_service.set_password(password=password, username=username)
+                    TokenService().delete_token_by_user(user.username)
+                    print(f'用户 {username} 已存在，已更新密码 {password}')
+                if is_admin:
+                    user = self.user_service.get_user_by_name(username)
+                    if not user:
+                        raise UserNotFoundError
+                    user.is_staff = True
+                    user.save()
+                    print(f'用户 {username} 已存在，已更新为管理员')
             except (ValueError, UserNotFoundError):
+                if self.user_service.db.objects.count() == 0:
+                    is_admin = True
+                    print('由于当前用户列表为空，初始化当前用户为管理员')
                 self.user_service.create_user(
                     username=username,
                     password=password,
                     email='',
                     is_superuser=False,
-                    is_staff=True
+                    is_staff=is_admin
                 )
                 print(f'用户 {username} 创建成功，密码 {password}')
 

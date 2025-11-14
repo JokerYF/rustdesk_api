@@ -91,7 +91,7 @@ class ClientTags(models.Model):
     """
     标签模型
     """
-    user = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名',
+    user = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名',
                              related_name='user_tags')
     peer_id = models.CharField(max_length=255, verbose_name='设备ID')
     tags = models.CharField(max_length=255, verbose_name='标签名称')
@@ -110,8 +110,8 @@ class Token(models.Model):
     """
     令牌模型
     """
-    username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
-    # username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
+    username = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名')
+    # username = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名')
     # uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
     uuid = models.CharField(max_length=255, verbose_name='设备UUID')
     token = models.CharField(max_length=255, verbose_name='令牌')
@@ -135,7 +135,7 @@ class LoginClient(models.Model):
     """
     登录客户端模型
     """
-    username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名')
+    username = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名')
     peer_id = models.CharField(max_length=255, verbose_name='客户端ID')
     # uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
     uuid = models.CharField(max_length=255, verbose_name='设备UUID')
@@ -159,7 +159,7 @@ class Log(models.Model):
     """
     日志模型
     """
-    username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, verbose_name='用户名', null=True,
+    username = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名', null=True,
                                  default='')
     uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
     log_level = models.CharField(max_length=50, verbose_name='日志类型',
@@ -202,7 +202,7 @@ class AutidConnLog(models.Model):
     controlled_uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE,
                                         verbose_name='被控端UUID', related_name='auditlog_controlled')
     type = models.IntegerField(verbose_name='类型', default=0)
-    username = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, max_length=50,
+    username = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, max_length=50,
                                  verbose_name='发起连接的用户', null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
@@ -255,7 +255,7 @@ class UserPersonal(models.Model):
     """
     用户与个人地址簿关系模型
     """
-    user = models.ForeignKey(User, to_field='username', on_delete=models.CASCADE, related_name='user_personal')
+    user = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, related_name='user_personal')
     personal = models.ForeignKey(Personal, to_field='id', on_delete=models.CASCADE, related_name='personal_user')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 

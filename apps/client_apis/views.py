@@ -10,11 +10,12 @@ from apps.client_apis.common import check_login, request_debug_log, debug_reques
 from apps.db.models import PeerInfo
 from apps.db.service import HeartBeatService, PeerInfoService, TokenService, UserService, \
     LoginClientService
-from common.utils import get_local_time
+from common.utils import get_local_time, str2bool
 
 logger = logging.getLogger(__name__)
 
 
+@request_debug_log
 @require_http_methods(["GET"])
 def time_test(request: HttpRequest):
     """
@@ -33,8 +34,8 @@ def time_test(request: HttpRequest):
     })
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 def heartbeat(request: HttpRequest):
     request_data = json.loads(request.body.decode('utf-8'))
     uuid = request_data.get('uuid')
@@ -51,8 +52,8 @@ def heartbeat(request: HttpRequest):
     return HttpResponse(status=200)
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 def sysinfo(request: HttpRequest):
     body = json.loads(request.body.decode('utf-8'))
     uuid = body.get('uuid')
@@ -76,8 +77,8 @@ def sysinfo(request: HttpRequest):
     return HttpResponse(status=200)
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 def login(request: HttpRequest):
     """
     处理用户登录请求
@@ -132,8 +133,8 @@ def login(request: HttpRequest):
     )
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 @check_login
 def logout(request: HttpRequest):
     token_service = TokenService(request=request)
@@ -161,8 +162,8 @@ def logout(request: HttpRequest):
     return JsonResponse({'code': 1})
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 @check_login
 def current_user(request: HttpRequest):
     """
@@ -183,8 +184,8 @@ def current_user(request: HttpRequest):
     )
 
 
-@require_http_methods(["GET"])
 @request_debug_log
+@require_http_methods(["GET"])
 @check_login
 def users(request: HttpRequest):
     """
@@ -194,11 +195,11 @@ def users(request: HttpRequest):
     """
     page = int(request.GET.get('current', 1))
     page_size = int(request.GET.get('pageSize', 10))
-    status = int(request.GET.get('status', 1))
+    status = str2bool(request.GET.get('status') or True)
     token_service = TokenService(request=request)
     user_info = token_service.user_info
     if user_info.is_superuser:
-        result = UserService().get_list_by_status(status=status, page=page, page_size=page_size)['results']
+        result = UserService().get_list_by_status(is_active=status, page=page, page_size=page_size)['results']
     else:
         result = [user_info]
 
@@ -221,8 +222,8 @@ def users(request: HttpRequest):
     )
 
 
-@require_http_methods(["GET"])
 @request_debug_log
+@require_http_methods(["GET"])
 @check_login
 def peers(request: HttpRequest):
     """
@@ -262,8 +263,8 @@ def peers(request: HttpRequest):
     return JsonResponse(result)
 
 
-@require_http_methods(["GET"])
 @request_debug_log
+@require_http_methods(["GET"])
 @debug_request_None  # 官方对于设备组有权限控制，目前无法控制，直接返回None，接口不报错即可
 @check_login
 def device_group_accessible(request):

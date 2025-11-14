@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Home</title>
+    <title>控制台 - RustDeskApi</title>
     {% load static %}
     <link rel="stylesheet" href="/static/css/global.css">
     <link rel="stylesheet" href="/static/css/home.css">
@@ -98,6 +98,8 @@
     const DEVICE_STATUSES_URL = "{% url 'web_device_statuses' %}";
     const USER_UPDATE_URL = "{% url 'web_user_update' %}";
     const USER_RESET_PWD_URL = "{% url 'web_user_reset_password' %}";
+    const USER_DELETE_URL = "{% url 'web_user_delete' %}";
+    const USER_CREATE_URL = "{% url 'web_user_create' %}";
     const PERSONAL_LIST_URL = "{% url 'web_personal_list' %}";
     const PERSONAL_CREATE_URL = "{% url 'web_personal_create' %}";
     const PERSONAL_DELETE_URL = "{% url 'web_personal_delete' %}";
@@ -664,6 +666,24 @@
     }
 
     /**
+     根据导航项更新页面标题
+
+     :param {string} itemKey: 导航项标识
+     :returns: 无返回值
+     :rtype: void
+     */
+    function updatePageTitle(itemKey) {
+        const titleMap = {
+            'nav-1': '首页',
+            'nav-2': '设备管理',
+            'nav-3': '用户管理',
+            'nav-4': '地址簿'
+        };
+        const pageTitle = titleMap[itemKey] || '控制台';
+        document.title = `${pageTitle} - RustDeskApi`;
+    }
+
+    /**
      处理侧边导航点击
 
      :param {MouseEvent} event: 点击事件对象
@@ -678,6 +698,7 @@
         const link = event.currentTarget;
         const key = link.dataset.key;
         activateLinkByKey(key);
+        updatePageTitle(key);
         renderContent(key);
         try {
             localStorage.setItem(STORAGE_KEY, key);
@@ -709,6 +730,7 @@
             defaultKey = firstLink ? firstLink.dataset.key : 'nav-1';
         }
         activateLinkByKey(defaultKey);
+        updatePageTitle(defaultKey);
         renderContent(defaultKey);
     }
 
@@ -812,7 +834,7 @@
             } catch (e) {
             }
         }, false);
-        // 事件委托：nav-3 行级操作（编辑/重置密码）
+        // 事件委托：nav-3 行级操作（编辑/重置密码/删除）
         contentEl.addEventListener('click', function (e) {
             const btn = e.target.closest('.nav3-row-action');
             if (!btn) return;
@@ -831,7 +853,11 @@
                 if (uEl) uEl.value = username;
                 if (fEl) fEl.value = fullname;
                 if (eEl) eEl.value = email;
-                if (sEl) sEl.checked = isStaff;
+                if (sEl) {
+                    sEl.checked = isStaff;
+                    // 如果是当前用户，禁用管理员权限复选框
+                    sEl.disabled = (username === '{{ user.username }}');
+                }
                 openModalById('nav3-edit-root');
             } else if (action === 'reset_pwd') {
                 const uEl = document.getElementById('nav3-reset-username');
@@ -841,6 +867,35 @@
                 if (p1) p1.value = '';
                 if (p2) p2.value = '';
                 openModalById('nav3-reset-root');
+            } else if (action === 'delete') {
+                if (!confirm(`确定要删除用户"${username}"吗？删除后该用户将无法登录。`)) return;
+                const csrf = getCookie('csrftoken');
+                const body = new URLSearchParams();
+                body.set('username', username);
+                fetch(USER_DELETE_URL, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'X-CSRFToken': csrf
+                    },
+                    body: body.toString()
+                }).then(resp => {
+                    if (!resp.ok) return parseFetchError(resp);
+                    return resp.json();
+                }).then(data => {
+                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '删除失败');
+                    showToast('删除成功', 'success');
+                    const extra = collectNav3QueryOptions(document.getElementById('nav3-search-form'));
+                    renderContent('nav-3', extra);
+                    try {
+                        localStorage.setItem(STORAGE_KEY, 'nav-3');
+                    } catch (e) {
+                    }
+                }).catch(err => {
+                    showToast(err.message || '删除失败，请稍后重试', 'error');
+                });
             }
         }, false);
         // 提交 nav-3 编辑表单
@@ -933,6 +988,74 @@
                 }
             }).catch(err => {
                 showToast(err.message || '重置失败，请稍后重试', 'error');
+            });
+        }, false);
+        // 事件委托：nav-3 新建用户按钮
+        contentEl.addEventListener('click', function (e) {
+            const btn = e.target.closest('.nav3-create-btn');
+            if (!btn) return;
+            e.preventDefault();
+            // 清空表单
+            const form = document.getElementById('nav3-create-form');
+            if (form) form.reset();
+            openModalById('nav3-create-root');
+        }, false);
+        // 提交 nav-3 新建用户表单
+        contentEl.addEventListener('submit', function (e) {
+            const formEl = e.target;
+            if (!formEl || formEl.id !== 'nav3-create-form') return;
+            e.preventDefault();
+            const fd = new FormData(formEl);
+            const username = (fd.get('username') || '').trim();
+            const fullName = (fd.get('full_name') || '').trim();
+            const email = (fd.get('email') || '').trim();
+            const p1 = (fd.get('password1') || '').trim();
+            const p2 = (fd.get('password2') || '').trim();
+            const isStaff = formEl.querySelector('#nav3-create-is-staff')?.checked ? '1' : '0';
+            if (!username || !p1 || !p2) {
+                showToast('用户名和密码不能为空', 'error');
+                return;
+            }
+            if (p1 !== p2) {
+                showToast('两次密码不一致', 'error');
+                return;
+            }
+            if (p1.length < 6) {
+                showToast('密码长度至少为6位', 'error');
+                return;
+            }
+            const csrf = getCookie('csrftoken');
+            const body = new URLSearchParams();
+            body.set('username', username);
+            body.set('password1', p1);
+            body.set('password2', p2);
+            if (fullName) body.set('full_name', fullName);
+            if (email) body.set('email', email);
+            body.set('is_staff', isStaff);
+            fetch(USER_CREATE_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-CSRFToken': csrf
+                },
+                body: body.toString()
+            }).then(resp => {
+                if (!resp.ok) return parseFetchError(resp);
+                return resp.json();
+            }).then(data => {
+                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '创建失败');
+                showToast('用户创建成功', 'success');
+                closeModalById('nav3-create-root');
+                const extra = collectNav3QueryOptions(document.getElementById('nav3-search-form'));
+                renderContent('nav-3', extra);
+                try {
+                    localStorage.setItem(STORAGE_KEY, 'nav-3');
+                } catch (e) {
+                }
+            }).catch(err => {
+                showToast(err.message || '创建失败，请稍后重试', 'error');
             });
         }, false);
         // 事件委托：处理 nav-2 重置

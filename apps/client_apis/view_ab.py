@@ -10,8 +10,8 @@ from apps.db.service import TokenService, AliasService, TagService, PersonalServ
 logger = logging.getLogger(__name__)
 
 
-@require_http_methods(["GET", "POST"])
 @request_debug_log
+@require_http_methods(["GET", "POST"])
 @check_login
 @debug_request_None
 def ab(request: HttpRequest):
@@ -19,8 +19,8 @@ def ab(request: HttpRequest):
     return None
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 @check_login
 def ab_personal(request: HttpRequest):
     """
@@ -39,8 +39,8 @@ def ab_personal(request: HttpRequest):
     )
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 @check_login
 def ab_tags(request, guid):
     token_service = TokenService(request=request)
@@ -56,8 +56,8 @@ def ab_tags(request, guid):
     return JsonResponse(data, safe=False, status=200)
 
 
-@require_http_methods(["DELETE"])
 @request_debug_log
+@require_http_methods(["DELETE"])
 @check_login
 def ab_tag(request, guid):
     token_service = TokenService(request=request)
@@ -70,8 +70,8 @@ def ab_tag(request, guid):
     return HttpResponse(status=200)
 
 
-@require_http_methods(["POST", "PUT"])
 @request_debug_log
+@require_http_methods(["POST", "PUT"])
 @check_login
 def ab_tag_add(request, guid):
     token_service = TokenService(request=request)
@@ -88,8 +88,8 @@ def ab_tag_add(request, guid):
     return HttpResponse(status=200)
 
 
-@require_http_methods(["PUT"])
 @request_debug_log
+@require_http_methods(["PUT"])
 @check_login
 def ab_tag_rename(request, guid):
     token_service = TokenService(request=request)
@@ -104,8 +104,8 @@ def ab_tag_rename(request, guid):
     return HttpResponse(status=200)
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 @check_login
 def ab_settings(request):
     return JsonResponse(
@@ -115,8 +115,8 @@ def ab_settings(request):
     )
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 @check_login
 def ab_shared_profiles(request):
     token_service = TokenService(request=request)
@@ -148,8 +148,8 @@ def ab_shared_profiles(request):
     return JsonResponse(data)
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 @check_login
 def ab_peers(request):
     """
@@ -204,8 +204,8 @@ def ab_peers(request):
     return JsonResponse(result)
 
 
-@require_http_methods(["POST"])
 @request_debug_log
+@require_http_methods(["POST"])
 @check_login
 def ab_peer_add(request, guid):
     token_service = TokenService(request=request)
@@ -222,8 +222,8 @@ def ab_peer_add(request, guid):
         )
 
 
-@require_http_methods(["PUT"])
 @request_debug_log
+@require_http_methods(["PUT"])
 @check_login
 def ab_peer_update(request, guid):
     token_service = TokenService(request=request)
@@ -242,8 +242,8 @@ def ab_peer_update(request, guid):
     return HttpResponse(status=200)
 
 
-@require_http_methods(["DELETE"])
 @request_debug_log
+@require_http_methods(["DELETE"])
 @check_login
 def ab_peer_delete(request, guid):
     token_service = TokenService(request=request)
