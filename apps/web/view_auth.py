@@ -5,6 +5,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
+from django.views.decorators.http import require_http_methods
 
 from apps.client_apis.common import request_debug_log
 
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @request_debug_log
+@require_http_methods(['GET'])
 @login_required(login_url='web_login')
 def index(request):
     if request.method == 'GET':
@@ -24,6 +26,7 @@ def index(request):
 
 
 @request_debug_log
+@require_http_methods(['GET', 'POST'])
 def login(request: HttpRequest):
     """
     处理登录请求：使用 Django 标准认证（authenticate/login），
@@ -57,6 +60,7 @@ def login(request: HttpRequest):
 
 @request_debug_log
 @login_required(login_url='web_login')
+@require_http_methods(['GET'])
 def logout(request):
     auth_logout(request)
     return redirect('web_login')

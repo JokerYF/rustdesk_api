@@ -106,6 +106,24 @@ class UserService(BaseService):
 
         return user
 
+    def set_user_config(self, username, config_key, config_value):
+        qs = self.db.objects.filter(username=username).first()
+        qs.user_config.config_name = config_key
+        qs.user_config.config_value = config_value
+        qs.save()
+
+    def get_user_config(self, username, config_key=None):
+        qs = self.db.objects.filter(username=username).first()
+        if not qs:
+            return None
+        return qs.user_config.objects.filter(config_name=config_key)
+
+    def get_user_all_config(self, username):
+        qs = self.db.objects.filter(username=username).first()
+        if not qs:
+            return None
+        return qs.user_config.objects.all()
+
     def get_user_by_email(self, email) -> User:
         return self.db.objects.filter(email=email).first()
 
@@ -420,10 +438,10 @@ class TokenService(BaseService):
         :return: 令牌
         """
         assert client_type in [1, 2, 3]
-        username = self.get_user_info(username)
+        user_qs = self.get_user_info(username)
         token = f"{get_randem_md5()}_{username}"
 
-        if qs := self.db.objects.filter(username=username, uuid=uuid, client_type=client_type).first():
+        if qs := self.db.objects.filter(username=user_qs, uuid=uuid, client_type=client_type).first():
             qs.token = token
             qs.created_at = get_local_time()
             qs.last_used_at = get_local_time()
@@ -431,7 +449,7 @@ class TokenService(BaseService):
             logger.info(f"更新令牌: user: {username} uuid: {uuid} token: {token}")
         else:
             self.db.objects.create(
-                username=self.get_user_info(username),
+                username=user_qs,
                 uuid=uuid,
                 token=token,
                 client_type=client_type,
@@ -812,10 +830,10 @@ class PersonalService(BaseService):
     db = Personal
 
     def create_personal(self, personal_name, create_user, personal_type="public"):
-        create_user = self.get_user_info(create_user)
+        qs = self.get_user_info(create_user)
         personal = self.db.objects.create(
             personal_name=personal_name,
-            create_user=create_user,
+            create_user=qs,
             personal_type=personal_type,
         )
         personal.personal_user.create(user=create_user)
@@ -825,10 +843,10 @@ class PersonalService(BaseService):
         return personal
 
     def create_self_personal(self, username):
-        username = self.get_user_info(username)
+        qs = self.get_user_info(username)
         personal = self.create_personal(
-            personal_name=f'{username.username}_personal',
-            create_user=username,
+            personal_name=f'{username}_personal',
+            create_user=qs,
             personal_type="private"
         )
         return personal
@@ -848,16 +866,16 @@ class PersonalService(BaseService):
         return None
 
     def add_personal_to_user(self, guid, username):
-        user = self.get_user_info(username)
-        res = self.get_personal(guid=guid).personal_user.create(username=user)
+        user_qs = self.get_user_info(username)
+        res = self.get_personal(guid=guid).personal_user.create(username=user_qs)
         logger.info(f'分享地址簿给用户: {guid} - {username}')
         return res
 
     def del_personal_to_user(self, guid, username):
-        username = self.get_user_info(username)
+        user_qs = self.get_user_info(username)
         res = (
             self.get_personal(guid=guid)
-            .personal_user.filter(username=username)
+            .personal_user.filter(username=user_qs)
             .delete()
         )
         logger.info(f'取消分享地址簿: guid={guid}, username={username}')
@@ -960,3 +978,25 @@ class SharePersonalService(BaseService):
         ).values_list("guid", flat=True)
 
         return PersonalService.db.objects.filter(guid__in=personal_ids).all()
+
+
+class UserConfig(BaseService):
+    def __init__(self, user: User | str):
+        self.user = self.get_user_info(user)
+
+    def get_config(self):
+        return self.user.user_config.objects.all()
+
+    def set_language(self, language):
+        self.user.user_config.objects.update_or_create(
+            user=self.user,
+            defaults={
+                "config_name": 'language',
+                "config_value": language
+            }
+        )
+
+    def get_language(self):
+        if qs := self.user.user_config.objects.filter(config_name='language').first():
+            return qs.config_value
+        return None
