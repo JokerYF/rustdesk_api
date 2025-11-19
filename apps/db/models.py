@@ -33,7 +33,7 @@ class PeerInfo(models.Model):
     device_name = models.CharField(max_length=255, verbose_name='主机名')
     memory = models.CharField(max_length=50, verbose_name='内存')
     os = models.TextField(verbose_name='操作系统')
-    user_id = models.CharField(max_length=255, verbose_name='用户名')
+    username = models.CharField(max_length=255, verbose_name='用户名')
     uuid = models.CharField(max_length=255, unique=True, verbose_name='设备UUID')
     # uuid = models.ForeignKey(HeartBeat, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
     version = models.CharField(max_length=50, verbose_name='客户端版本')

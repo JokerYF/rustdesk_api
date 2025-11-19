@@ -57,7 +57,6 @@ def heartbeat(request: HttpRequest):
 def sysinfo(request: HttpRequest):
     body = json.loads(request.body.decode('utf-8'))
     uuid = body.get('uuid')
-    user_info = UserService().get_user_info(body.get('username'))
 
     # 先更新设备信息
     PeerInfoService().update(
@@ -67,7 +66,7 @@ def sysinfo(request: HttpRequest):
         device_name=body.get('hostname'),
         memory=body.get('memory'),
         os=body.get('os'),
-        user_id=user_info.id,
+        username=body.get('username'),
         version=body.get('version'),
     )
 
