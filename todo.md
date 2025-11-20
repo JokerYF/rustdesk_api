@@ -1,4 +1,0 @@
-- 数据库设计
-  - ~~tag不需要关系表，需要弃掉，在tag表中增加guid字段，用于记录当前tag属于哪个guid~~
-- 路由
-  - ~~device-group/accessible和peers这两个接口目前定义不明确~~
