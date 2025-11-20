@@ -18,8 +18,12 @@ from apps.db.models import (
     Tag,
     Log,
     AutidConnLog,
+    AuditFileLog,
     UserPrefile,
-    Personal, Alias, ClientTags, SharePersonal,
+    Personal,
+    Alias,
+    ClientTags,
+    SharePersonal,
 )
 from common.error import UserNotFoundError
 from common.utils import get_local_time, get_randem_md5
@@ -741,8 +745,8 @@ class LogService(BaseService):
         :return: 新创建的日志实例
         """
         log = self.db.objects.create(
-            user_id=self.get_user_info(username),
-            uuid=self.get_peer_by_uuid(uuid),
+            user_id=self.get_user_info(username).id,
+            uuid=uuid,
             log_level=log_level,
             operation_type=log_type,  # 根据实际需求映射到合适的操作类型
             operation_object="log",  # 根据实际需求设置操作对象
@@ -791,12 +795,16 @@ class AuditConnService(BaseService):
         :param session_id:
         :return:
         """
+        if username:
+            user_id = self.get_user_info(username).id
+        else:
+            user_id = ''
         if action:
             if action == "new":
                 self.db.objects.create(
                     conn_id=conn_id,
                     action=action,
-                    controlled_uuid=self.get_peer_by_uuid(controlled_uuid),
+                    controlled_uuid=controlled_uuid,
                     initiating_ip=source_ip,
                     session_id=session_id,
                 )
@@ -808,23 +816,74 @@ class AuditConnService(BaseService):
                 self.db.objects.create(
                     conn_id=conn_id,
                     action=action,
-                    controlled_uuid=self.get_peer_by_uuid(controlled_uuid),
+                    controlled_uuid=controlled_uuid,
                     controller_uuid=connect_log.controlled_uuid,
                     initiating_ip=connect_log.initiating_ip,
                     session_id=session_id,
-                    user_id=connect_log.username,
+                    user_id=connect_log.user_id,
                     type=connect_log.type,
                 )
         else:
             self.db.objects.filter(conn_id=conn_id).update(
                 session_id=session_id,
-                controller_uuid=self.get_peer_by_peer_id(controller_peer_id),
-                user_id=self.get_user_info(username),
+                controller_uuid=controller_peer_id,
+                user_id=user_id,
                 type=type_,
             )
         logger.info(
             f'审计连接: conn_id="{conn_id}", action="{action}", controlled_uuid="{controlled_uuid}", source_ip="{source_ip}", session_id="{session_id}"'
         )
+
+
+class AuditFileLogService(BaseService):
+    """
+    审计文件服务类
+
+    用于处理审计文件相关的业务逻辑
+    """
+    db = AuditFileLog
+
+    @property
+    def conn_service(self):
+        return AuditConnService()
+
+    @property
+    def conn_id(self):
+        qs = self.conn_service.db.objects.first()
+        if qs.type == 1:
+            return qs.conn_id
+        return None
+
+    def log(
+            self,
+            source_id,
+            target_id,
+            target_uuid,
+            target_ip,
+            operation_type,
+            is_file,
+            remote_path,
+            file_info,
+            user_id,
+            file_num,
+    ):
+        res = self.db.objects.create(
+            conn_id=self.conn_id,
+            source_id=source_id,
+            target_id=target_id,
+            target_uuid=target_uuid,
+            target_ip=target_ip,
+            operation_type=operation_type,
+            is_file=is_file,
+            remote_path=remote_path,
+            file_info=file_info,
+            user_id=user_id,
+            file_num=file_num,
+        )
+        logger.info(
+            f'审计文件: source_id="{source_id}", target_id="{target_id}", target_uuid="{target_uuid}", operation_type="{operation_type}", is_file="{is_file}", remote_path="{remote_path}", user_id="{user_id}", file_num="{file_num}"'
+        )
+        return res
 
 
 class PersonalService(BaseService):

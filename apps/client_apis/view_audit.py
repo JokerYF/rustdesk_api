@@ -1,10 +1,14 @@
 import json
+import logging
+import traceback
 
 from django.http import HttpRequest, HttpResponse
 from django.views.decorators.http import require_http_methods
 
 from apps.client_apis.common import request_debug_log
-from apps.db.service import AuditConnService
+from apps.db.service import AuditConnService, TokenService, AuditFileLogService, UserService
+
+logger = logging.getLogger(__name__)
 
 
 @request_debug_log
@@ -15,7 +19,8 @@ def audit_conn(request: HttpRequest):
     :param request:
     :return:
     """
-    body = json.loads(request.body)
+    token_service = TokenService(request=request)
+    body = token_service.request_body
     action = body.get('action')
     conn_id = body.get('conn_id')
     ip = body.get('ip', '')
@@ -51,7 +56,34 @@ def audit_file(request):
     :param request:
     :return:
     """
-    # {"id":"488591401","info":"{\\"files\\":[[\\"\\",52923]],\\"ip\\":\\"172.16.41.91\\",\\"name\\":\\"Admin\\",\\"num\\":1}","is_file":true,"path":"C:\\\\Users\\\\Joker\\\\Downloads\\\\api_swagger.json","peer_id":"1508540501","type":1,"uuid":"MjI5MzdiMDAtNjExNy00OTVmLWFjNWUtNGM2MTc2NTE1Zjdl"}
-    # {"id":"488591401","info":"{\\"files\\":[[\\"\\",801524]],\\"ip\\":\\"172.16.41.91\\",\\"name\\":\\"Admin\\",\\"num\\":1}","is_file":true,"path":"C:\\\\Users\\\\Joker\\\\Downloads\\\\782K.ofd","peer_id":"1508540501","type":0,"uuid":"MjI5MzdiMDAtNjExNy00OTVmLWFjNWUtNGM2MTc2NTE1Zjdl"}
+    token_service = TokenService(request=request)
+    body = token_service.request_body
+    target_peer_id = body.get('id')
+    file_info = json.loads(body.get('info'))
+    is_file = body.get('is_file')
+    file_path = body.get('path')
+    source_peer_id = body.get('peer_id')
+    type_ = body.get('type')  # 0:下载 1:上传
+    uuid = body.get('uuid')
+
+    try:
+        user_id = UserService().get_user_by_name(file_info.get('name').lower()).id
+    except Exception:
+        logger.error(traceback.format_exc())
+        user_id = ''
+
+    file_service = AuditFileLogService()
+    file_service.log(
+        source_id=source_peer_id,
+        target_id=target_peer_id,
+        target_uuid=uuid,
+        target_ip=file_info.get('ip'),
+        operation_type=type_,
+        is_file=is_file,
+        remote_path=file_path,
+        file_info=str(file_info.get('files')),
+        user_id=user_id,
+        file_num=file_info.get('num'),
+    )
 
     return HttpResponse(status=200)

@@ -93,7 +93,7 @@ class ClientTags(models.Model):
     标签模型
     """
     user_id = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名',
-                             related_name='user_tags')
+                                related_name='user_tags')
     peer_id = models.CharField(max_length=255, verbose_name='设备ID')
     tags = models.CharField(max_length=255, verbose_name='标签名称')
     guid = models.CharField(max_length=50, verbose_name='GUID')
@@ -161,7 +161,7 @@ class Log(models.Model):
     日志模型
     """
     user_id = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名', null=True,
-                                 default='')
+                                default='')
     uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
     log_level = models.CharField(max_length=50, verbose_name='日志类型',
                                  choices=[('info', '信息'), ('warning', '警告'), ('error', '错误')])
@@ -198,13 +198,11 @@ class AutidConnLog(models.Model):
     conn_id = models.IntegerField(verbose_name='连接ID')
     initiating_ip = models.CharField(max_length=50, verbose_name='发起IP')
     session_id = models.CharField(max_length=50, verbose_name='会话ID', null=True)
-    controller_uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE,
-                                        verbose_name='控制端UUID', related_name='auditlog_controller', null=True)
-    controlled_uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE,
-                                        verbose_name='被控端UUID', related_name='auditlog_controlled')
-    type = models.IntegerField(verbose_name='类型', default=0)
-    user_id = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, max_length=50,
-                                 verbose_name='发起连接的用户', null=True)
+    controller_uuid = models.CharField(max_length=255, verbose_name='控制端UUID', null=True)
+    controlled_uuid = models.CharField(max_length=255, verbose_name='被控端UUID')
+    type = models.IntegerField(verbose_name='类型', default=0,
+                               choices=[(0, 'connect'), (1, 'file_transfer'), (2, 'tcp_tunnel'), (3, 'camera')])
+    user_id = models.CharField(max_length=50, verbose_name='发起连接的用户', null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
     class Meta:
@@ -213,20 +211,25 @@ class AutidConnLog(models.Model):
         ordering = ['-created_at']
         db_table = 'audit_log'
 
+    def __str__(self):
+        return f'{self.action} {self.conn_id} {self.initiating_ip} {self.session_id} {self.controller_uuid} {self.controlled_uuid} {self.type} {self.user_id} {self.created_at}'
+
 
 class AuditFileLog(models.Model):
     """
     审计文件模型
     """
-    conn_id = models.IntegerField(verbose_name='连接ID')
-    controller_uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, max_length=255,
-                                        verbose_name='控制端UUID', related_name='auditfile_controller')
-    controlled_uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, max_length=255,
-                                        verbose_name='被控端UUID', related_name='auditfile_controlled')
-    operation_type = models.IntegerField(verbose_name='操作类型', default=1)
-    operation_info = models.CharField(verbose_name='操作信息', null=True, default='')
+    conn_id = models.IntegerField(verbose_name='连接ID', null=True)
+    source_id = models.CharField(max_length=255, verbose_name='控制端ID')
+    target_id = models.CharField(max_length=255, verbose_name='被控端ID')
+    target_uuid = models.CharField(max_length=255, verbose_name='被控端UUID')
+    target_ip = models.CharField(max_length=255, verbose_name='被控端IP')
+    operation_type = models.IntegerField(verbose_name='操作类型', default=1, choices=[(1, 'upload'), (0, 'download')])
     is_file = models.BooleanField(verbose_name='是否文件')
-    remote_path = models.CharField(verbose_name='远程路径', null=True, default='')
+    remote_path = models.CharField(verbose_name='远程路径', null=True)
+    file_info = models.TextField(verbose_name='文件信息', null=True)
+    user_id = models.CharField(max_length=50, verbose_name='操作用户', null=True)
+    file_num = models.IntegerField(verbose_name='文件数量', null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
     class Meta:
