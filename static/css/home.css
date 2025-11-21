@@ -48,7 +48,7 @@ body {
 
 .sidebar {
     width: 240px;
-    flex: 0 0 240px;
+    flex: 0 0 180px;
     border-right: 1px solid #eaeef2;
     background: #f7f8fa;
     padding: 16px 0;
