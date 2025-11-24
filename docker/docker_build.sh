@@ -56,7 +56,7 @@ generate_version() {
 save_version_files() {
   local version="$1"; shift || true
   local repo_root
-  repo_root="$(cd "$(dirname "$0")" && pwd)"
+  repo_root="$(cd "$(dirname "$0")/.." && pwd)"
   local env_file="${repo_root}/.env"
 
   # 确保 .env 存在（不清空，保留已有变量）
@@ -93,6 +93,11 @@ save_version_files() {
 build_image() {
   local version="$1"
   echo "开始构建 Docker 镜像: ${IMAGE_NAME}:${version}"
+  # 更改工作目录到项目根目录以确保正确的构建上下文
+  local project_root
+  project_root="$(cd "$(dirname "$0")/.." && pwd)"
+  cd "$project_root"
+
   docker build \
     --build-arg APP_VERSION="${version}" \
     -t "${IMAGE_NAME}:${version}" \
