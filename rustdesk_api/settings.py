@@ -129,7 +129,7 @@ LANGUAGE_CODE = 'zh-hans'  # 简体中文
 TIME_ZONE = 'Asia/Shanghai'  # 使用服务器本地时区
 
 USE_I18N = True
-USE_TZ = True  # 使用本地化时间
+USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

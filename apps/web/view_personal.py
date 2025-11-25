@@ -51,7 +51,7 @@ def create_personal(request: HttpRequest) -> JsonResponse:
 
     # 检查是否已存在同名地址簿
     existing = Personal.objects.filter(
-        create_user=request.user,
+        create_user_id=request.user.id,
         personal_name=personal_name
     ).first()
     if existing:
@@ -60,7 +60,7 @@ def create_personal(request: HttpRequest) -> JsonResponse:
     # 创建地址簿
     personal = Personal.objects.create(
         personal_name=personal_name,
-        create_user=request.user,
+        create_user_id=request.user.id,
         personal_type=personal_type
     )
 
@@ -82,7 +82,7 @@ def delete_personal(request: HttpRequest) -> JsonResponse:
     if not guid:
         return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
 
-    personal = Personal.objects.filter(guid=guid, create_user=request.user).first()
+    personal = Personal.objects.filter(guid=guid, create_user_id=request.user.id).first()
     if not personal:
         return JsonResponse({'ok': False, 'err_msg': '地址簿不存在或无权限删除'}, status=404)
 
@@ -110,7 +110,7 @@ def rename_personal(request: HttpRequest) -> JsonResponse:
     if not guid or not new_name:
         return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
 
-    personal = Personal.objects.filter(guid=guid, create_user=request.user).first()
+    personal = Personal.objects.filter(guid=guid, create_user_id=request.user.id).first()
     if not personal:
         return JsonResponse({'ok': False, 'err_msg': '地址簿不存在或无权限修改'}, status=404)
 
@@ -120,7 +120,7 @@ def rename_personal(request: HttpRequest) -> JsonResponse:
 
     # 检查新名称是否已存在
     existing = Personal.objects.filter(
-        create_user=request.user,
+        create_user_id=request.user.id,
         personal_name=new_name
     ).exclude(guid=guid).first()
     if existing:
@@ -146,19 +146,25 @@ def personal_detail(request: HttpRequest) -> JsonResponse:
     if not guid:
         return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
 
-    personal = Personal.objects.filter(guid=guid, create_user=request.user).first()
+    personal = Personal.objects.filter(guid=guid, create_user_id=request.user.id).first()
     if not personal:
         return JsonResponse({'ok': False, 'err_msg': '地址簿不存在或无权限查看'}, status=404)
 
-    # 获取地址簿中的设备（通过Alias表关联）
-    aliases = Alias.objects.filter(guid=personal).select_related('peer_id').order_by('-created_at')
+    personal_service = PersonalService()
+    peers = personal_service.get_peers_by_personal(guid=guid)
 
     # 在线判定：心跳表 5 分钟内有记录视为在线
     online_threshold = timezone.now() - timedelta(minutes=5)
 
     devices = []
-    for alias in aliases:
-        peer = alias.peer_id
+    # 获取所有peer的ID列表
+    peer_ids = [peer_info.peer.peer_id for peer_info in peers]
+
+    # 使用AliasService批量获取别名映射
+    alias_map = AliasService().get_alias_map(guid=guid, peer_ids=peer_ids)
+    
+    for peer_info in peers:
+        peer = peer_info.peer
         # 检查在线状态
         is_online = HeartBeat.objects.filter(
             Q(peer_id=peer.peer_id) | Q(uuid=peer.uuid),
@@ -171,7 +177,7 @@ def personal_detail(request: HttpRequest) -> JsonResponse:
 
         devices.append({
             'peer_id': peer.peer_id,
-            'alias': alias.alias,
+            'alias': alias_map.get(peer.peer_id, ''),  # 使用别名映射获取别名
             'tags': tags,
             'device_name': peer.device_name,
             'os': peer.os,
@@ -205,7 +211,7 @@ def get_personal_list(request: HttpRequest) -> JsonResponse:
     """
 
     # 获取当前用户的所有地址簿
-    personals = Personal.objects.filter(create_user=request.user).order_by('personal_name')
+    personals = Personal.objects.filter(create_user_id=request.user.id).order_by('personal_name')
 
     data = []
     for personal in personals:
@@ -241,7 +247,7 @@ def add_device_to_personal(request: HttpRequest) -> JsonResponse:
     if not guid or not peer_id:
         return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
 
-    personal = Personal.objects.filter(guid=guid, create_user=request.user).first()
+    personal = Personal.objects.filter(guid=guid, create_user_id=request.user.id).first()
     if not personal:
         return JsonResponse({'ok': False, 'err_msg': '地址簿不存在或无权限操作'}, status=404)
 
@@ -279,24 +285,15 @@ def remove_device_from_personal(request: HttpRequest) -> JsonResponse:
     if not guid or not peer_id:
         return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
 
-    personal = Personal.objects.filter(guid=guid, create_user=request.user).first()
+    personal = Personal.objects.filter(guid=guid, create_user_id=request.user.id).first()
     if not personal:
         return JsonResponse({'ok': False, 'err_msg': '地址簿不存在或无权限操作'}, status=404)
-
-    # 删除别名记录
-    deleted_count = Alias.objects.filter(
-        peer_id__peer_id=peer_id,
-        guid=personal
-    ).delete()[0]
 
     PersonalService().del_peer_to_personal(
         guid=guid,
         peer_id=peer_id,
         user=request.user
     )
-
-    if deleted_count == 0:
-        return JsonResponse({'ok': False, 'err_msg': '设备不在该地址簿中'}, status=404)
 
     return JsonResponse({'ok': True})
 
@@ -319,7 +316,7 @@ def update_device_alias_in_personal(request: HttpRequest) -> JsonResponse:
         return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
 
     # 验证地址簿权限
-    personal = Personal.objects.filter(guid=guid, create_user=request.user).first()
+    personal = Personal.objects.filter(guid=guid, create_user_id=request.user.id).first()
     if not personal:
         return JsonResponse({'ok': False, 'err_msg': '地址簿不存在或无权限操作'}, status=404)
 
@@ -361,7 +358,7 @@ def update_device_tags_in_personal(request: HttpRequest) -> JsonResponse:
         return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
 
     # 验证地址簿权限
-    personal = Personal.objects.filter(guid=guid, create_user=request.user).first()
+    personal = Personal.objects.filter(guid=guid, create_user_id=request.user.id).first()
     if not personal:
         return JsonResponse({'ok': False, 'err_msg': '地址簿不存在或无权限操作'}, status=404)
 

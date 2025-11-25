@@ -108,10 +108,12 @@ def delete_user(request: HttpRequest) -> JsonResponse:
     # 软删除：将is_active置为False
     user.is_active = False
     new_name = user.username
-    user.username = new_name + f'_deleted_{time.time()}'
+    # 使用时间戳确保用户名唯一性
+    timestamp = int(time.time())
+    user.username = new_name + f'_deleted_{timestamp}'
     update_fields = ['username', 'is_active']
     if email := user.email:
-        user.email = email + f'_deleted_{time.time()}'
+        user.email = email + f'_deleted_{timestamp}'
         update_fields.append('email')
     user.save(update_fields=update_fields)
     return JsonResponse({'ok': True})

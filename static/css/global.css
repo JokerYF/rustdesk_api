@@ -12,16 +12,56 @@ body {
 /* Reusable horizontal scroll container */
 .x-scroll-container {
     width: 100%;
-    max-width: 100vw;
+    max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    margin-bottom: 4px; /* 为滚动条预留空间 */
 }
 
 /* Inside scroll container, allow tables to grow beyond container to trigger horizontal scroll */
 .x-scroll-container .resizable-table {
     width: max-content;
     min-width: 100%;
+}
+
+/* 表格固定列宽，防止内容折行 */
+.x-scroll-container table {
+    width: auto; /* 让表格根据列宽自动计算 */
+    min-width: 100%; /* 至少占满容器 */
+}
+
+/* 表格单元格统一处理 - 防止内容折行和溢出 */
+.x-scroll-container table th,
+.x-scroll-container table td {
+    overflow: hidden; /* 隐藏溢出内容 */
+    text-overflow: ellipsis; /* 溢出显示省略号 */
+    white-space: nowrap; /* 不折行 */
+    box-sizing: border-box;
+    max-width: none; /* 允许列宽按设定值显示 */
+}
+
+/* 有明确宽度设置的列，强制应用该宽度 */
+.x-scroll-container table th[style*="width"],
+.x-scroll-container table td {
+    min-width: auto; /* 移除最小宽度限制 */
+}
+
+/* 操作列允许内容换行，保证按钮显示完整 */
+.x-scroll-container table th[data-col-key="actions"],
+.x-scroll-container table td[data-col-key="actions"] {
+    white-space: normal; /* 允许操作按钮换行 */
+}
+
+/* 确保操作列内的flex布局正常工作 */
+.x-scroll-container table td .nav2-row-actions {
+    white-space: normal; /* 允许操作按钮换行 */
+    min-width: 0; /* 允许flex子项收缩 */
+}
+
+/* 为内容添加title属性提示（通过伪元素实现） */
+.x-scroll-container table td[title] {
+    cursor: help;
 }
 
 

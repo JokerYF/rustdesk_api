@@ -13,6 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_VERSION=${APP_VERSION}
 
 RUN pip install -r requirements.txt -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+RUN pip cache purge
 
 EXPOSE 21114
 

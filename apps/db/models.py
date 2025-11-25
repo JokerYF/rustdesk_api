@@ -56,7 +56,8 @@ class Personal(models.Model):
     """
     guid = models.CharField(max_length=50, verbose_name='GUID', default=get_uuid, unique=True)
     personal_name = models.CharField(max_length=50, verbose_name='地址簿名称')
-    create_user = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, related_name='personal_create_user')
+    create_user_id = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE,
+                                       related_name='personal_create_user')
     personal_type = models.CharField(verbose_name='地址簿类型', default='public',
                                      choices=[('public', '公开'), ('private', '私有')])
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
@@ -66,7 +67,7 @@ class Personal(models.Model):
         verbose_name_plural = '地址簿'
         ordering = ['-created_at']
         db_table = 'personal'
-        unique_together = [['personal_name', 'create_user']]
+        unique_together = [['personal_name', 'create_user_id']]
 
 
 class Tag(models.Model):
@@ -91,8 +92,8 @@ class ClientTags(models.Model):
     """
     标签模型
     """
-    user = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名',
-                             related_name='user_tags')
+    user_id = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名',
+                                related_name='user_tags')
     peer_id = models.CharField(max_length=255, verbose_name='设备ID')
     tags = models.CharField(max_length=255, verbose_name='标签名称')
     guid = models.CharField(max_length=50, verbose_name='GUID')
@@ -103,16 +104,16 @@ class ClientTags(models.Model):
         unique_together = [['peer_id', 'guid']]
 
     def __str__(self):
-        return f'{self._meta.db_table}--{self.user, self.peer_id, self.tags, self.guid}'
+        return f'{self._meta.db_table}--{self.user_id, self.peer_id, self.tags, self.guid}'
 
 
 class Token(models.Model):
     """
     令牌模型
     """
-    username = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名')
-    # username = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名')
-    # uuid = models.ForeignKey(PeerInfo, to_field='id', on_delete=models.CASCADE, verbose_name='设备ID')
+    user_id = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名')
+    # user_id = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名')
+    # uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
     uuid = models.CharField(max_length=255, verbose_name='设备UUID')
     token = models.CharField(max_length=255, verbose_name='令牌')
     client_type = models.CharField(max_length=255, verbose_name='客户端类型',
@@ -125,19 +126,19 @@ class Token(models.Model):
         verbose_name_plural = '令牌'
         ordering = ['-created_at']
         db_table = 'token'
-        unique_together = [['username', 'uuid']]
+        unique_together = [['user_id', 'uuid']]
 
     def __str__(self):
-        return f'{self.username} ({self.uuid}-{self.token})'
+        return f'{self.user_id} ({self.uuid}-{self.token})'
 
 
 class LoginClient(models.Model):
     """
     登录客户端模型
     """
-    username = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名')
+    user_id = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名')
     peer_id = models.CharField(max_length=255, verbose_name='客户端ID')
-    # uuid = models.ForeignKey(PeerInfo, to_field='id', on_delete=models.CASCADE, verbose_name='设备ID')
+    # uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
     uuid = models.CharField(max_length=255, verbose_name='设备UUID')
     client_type = models.CharField(max_length=255, verbose_name='客户端类型',
                                    choices=[(1, 'web'), (2, 'client')], default=2)
@@ -151,7 +152,7 @@ class LoginClient(models.Model):
     class Meta:
         verbose_name = '登录客户端'
         verbose_name_plural = '登录客户端'
-        ordering = ['-username']
+        ordering = ['-user_id']
         db_table = 'login_client'
 
 
@@ -159,9 +160,9 @@ class Log(models.Model):
     """
     日志模型
     """
-    username = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名', null=True,
-                                 default='')
-    uuid = models.ForeignKey(PeerInfo, to_field='id', on_delete=models.CASCADE, verbose_name='设备ID')
+    user_id = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, verbose_name='用户名', null=True,
+                                default='')
+    uuid = models.ForeignKey(PeerInfo, to_field='uuid', on_delete=models.CASCADE, verbose_name='设备UUID')
     log_level = models.CharField(max_length=50, verbose_name='日志类型',
                                  choices=[('info', '信息'), ('warning', '警告'), ('error', '错误')])
     operation_type = models.CharField(max_length=50, verbose_name='操作类型',
@@ -197,13 +198,11 @@ class AutidConnLog(models.Model):
     conn_id = models.IntegerField(verbose_name='连接ID')
     initiating_ip = models.CharField(max_length=50, verbose_name='发起IP')
     session_id = models.CharField(max_length=50, verbose_name='会话ID', null=True)
-    controller_uuid = models.ForeignKey(PeerInfo, to_field='id', on_delete=models.CASCADE,
-                                        verbose_name='控制端ID', related_name='auditlog_controller', null=True)
-    controlled_uuid = models.ForeignKey(PeerInfo, to_field='id', on_delete=models.CASCADE,
-                                        verbose_name='被控端ID', related_name='auditlog_controlled')
-    type = models.IntegerField(verbose_name='类型', default=0)
-    username = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, max_length=50,
-                                 verbose_name='发起连接的用户', null=True)
+    controller_uuid = models.CharField(max_length=255, verbose_name='控制端UUID', null=True)
+    controlled_uuid = models.CharField(max_length=255, verbose_name='被控端UUID')
+    type = models.IntegerField(verbose_name='类型', default=0,
+                               choices=[(0, 'connect'), (1, 'file_transfer'), (2, 'tcp_tunnel'), (3, 'camera')])
+    user_id = models.CharField(max_length=50, verbose_name='发起连接的用户', null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
     class Meta:
@@ -212,20 +211,25 @@ class AutidConnLog(models.Model):
         ordering = ['-created_at']
         db_table = 'audit_log'
 
+    def __str__(self):
+        return f'{self.action} {self.conn_id} {self.initiating_ip} {self.session_id} {self.controller_uuid} {self.controlled_uuid} {self.type} {self.user_id} {self.created_at}'
+
 
 class AuditFileLog(models.Model):
     """
     审计文件模型
     """
-    conn_id = models.IntegerField(verbose_name='连接ID')
-    controller_uuid = models.ForeignKey(PeerInfo, to_field='id', on_delete=models.CASCADE, max_length=255,
-                                        verbose_name='控制端ID', related_name='auditfile_controller')
-    controlled_uuid = models.ForeignKey(PeerInfo, to_field='id', on_delete=models.CASCADE, max_length=255,
-                                        verbose_name='被控端ID', related_name='auditfile_controlled')
-    operation_type = models.IntegerField(verbose_name='操作类型', default=1)
-    operation_info = models.CharField(verbose_name='操作信息', null=True, default='')
+    conn_id = models.IntegerField(verbose_name='连接ID', null=True)
+    source_id = models.CharField(max_length=255, verbose_name='控制端ID')
+    target_id = models.CharField(max_length=255, verbose_name='被控端ID')
+    target_uuid = models.CharField(max_length=255, verbose_name='被控端UUID')
+    target_ip = models.CharField(max_length=255, verbose_name='被控端IP')
+    operation_type = models.IntegerField(verbose_name='操作类型', default=1, choices=[(1, 'upload'), (0, 'download')])
     is_file = models.BooleanField(verbose_name='是否文件')
-    remote_path = models.CharField(verbose_name='远程路径', null=True, default='')
+    remote_path = models.CharField(verbose_name='远程路径', null=True)
+    file_info = models.TextField(verbose_name='文件信息', null=True)
+    user_id = models.CharField(max_length=50, verbose_name='操作用户', null=True)
+    file_num = models.IntegerField(verbose_name='文件数量', null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
     class Meta:
@@ -256,7 +260,7 @@ class UserPersonal(models.Model):
     用户与个人地址簿关系模型
     """
     user = models.ForeignKey(User, to_field='id', on_delete=models.CASCADE, related_name='user_personal')
-    personal = models.ForeignKey(Personal, to_field='guid', on_delete=models.CASCADE, related_name='personal_user')
+    personal = models.ForeignKey(Personal, to_field='id', on_delete=models.CASCADE, related_name='personal_user')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
 
     class Meta:
@@ -307,7 +311,7 @@ class Alias(models.Model):
     别名模型
     """
     alias = models.CharField(max_length=50, verbose_name='别名')
-    peer_id = models.ForeignKey(PeerInfo, to_field='id', on_delete=models.CASCADE,
+    peer_id = models.ForeignKey(PeerInfo, to_field='peer_id', on_delete=models.CASCADE,
                                 related_name='alias_peer_id')
     guid = models.ForeignKey(Personal, to_field='guid', on_delete=models.CASCADE, related_name='alias_guid')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
@@ -324,7 +328,7 @@ class UserConfig(models.Model):
     """
     用户配置模型
     """
-    user = models.OneToOneField(User, to_field='id', on_delete=models.CASCADE, related_name='user_config')
+    user_id = models.OneToOneField(User, to_field='id', on_delete=models.CASCADE, related_name='user_config')
     config_name = models.CharField(max_length=50, verbose_name='配置名称')
     config_value = models.TextField(verbose_name='配置值')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
@@ -334,4 +338,4 @@ class UserConfig(models.Model):
         verbose_name_plural = '用户配置'
         ordering = ['-created_at']
         db_table = 'user_config'
-        unique_together = [['user', 'config_name']]
+        unique_together = [['user_id', 'config_name']]

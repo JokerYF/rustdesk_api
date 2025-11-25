@@ -38,15 +38,16 @@
         <table class="nav2-table" aria-label="设备列表" data-table-id="nav2-devices">
         <thead>
         <tr>
-            <th data-col-key="select" style="width: 44px;">
+            <th data-col-key="select" style="width: 30px;">
                 <input type="checkbox" id="nav2-select-all" aria-label="全选设备">
             </th>
-            <th data-col-key="peer_id">设备ID</th>
-            <th data-col-key="device_name">设备名</th>
-            <th data-col-key="status">状态</th>
-            <th data-col-key="version">版本</th>
-            <th data-col-key="created_at" style="width: 200px;">创建时间</th>
-            <th data-col-key="actions" style="width: 160px;">操作</th>
+            <th data-col-key="peer_id" style="width: 120px;">设备ID</th>
+            <th data-col-key="device_name" style="width: 170px;">设备名</th>
+            <th data-col-key="os" style="width: 120px;">系统</th>
+            <th data-col-key="status" style="width: 100px;">状态</th>
+            <th data-col-key="version" style="width: 120px;">版本</th>
+            <th data-col-key="created_at" style="width: 180px;">创建时间</th>
+            <th data-col-key="actions" style="width: 150px;">操作</th>
         </tr>
         </thead>
         <tbody>
@@ -58,6 +59,7 @@
                 </td>
                 <td>{{ d.peer_id }}</td>
                 <td>{{ d.device_name }}</td>
+                <td>{{ d.os }}</td>
                 <td>
                     {% if d.is_online %}
                         <span class="nav2-status online" data-status-for="{{ d.peer_id }}">在线</span>

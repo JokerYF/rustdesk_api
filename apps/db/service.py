@@ -18,8 +18,12 @@ from apps.db.models import (
     Tag,
     Log,
     AutidConnLog,
+    AuditFileLog,
     UserPrefile,
-    Personal, Alias, ClientTags, SharePersonal,
+    Personal,
+    Alias,
+    ClientTags,
+    SharePersonal,
 )
 from common.error import UserNotFoundError
 from common.utils import get_local_time, get_randem_md5
@@ -367,8 +371,9 @@ class LoginClientService(BaseService):
         return _type
 
     def update_login_status(self, username, uuid, platform, client_name, client_type='api', peer_id=None):
-        if not self.db.objects.filter(username=username, uuid=uuid).update(
-                username=self.get_user_info(username),
+        user_qs = self.get_user_info(username)
+        if not self.db.objects.filter(user_id=user_qs.id, uuid=uuid).update(
+                user_id=user_qs,
                 uuid=uuid,
                 peer_id=peer_id,
                 login_status=True,
@@ -377,7 +382,7 @@ class LoginClientService(BaseService):
                 client_name=client_name,
         ):
             self.db.objects.create(
-                username=self.get_user_info(username),
+                user_id=user_qs,
                 uuid=uuid,
                 peer_id=peer_id,
                 login_status=True,
@@ -389,19 +394,20 @@ class LoginClientService(BaseService):
         logger.info(f"更新登录状态: {username} - {uuid}")
 
     def update_logout_status(self, username, uuid, peer_id=None):
-        if not self.db.objects.filter(username=username, uuid=uuid).update(
-                username=self.get_user_info(username),
+        user_qs = self.get_user_info(username)
+        if not self.db.objects.filter(user_id=user_qs.id, uuid=uuid).update(
+                user_id=user_qs,
                 uuid=uuid,
                 peer_id=peer_id,
                 login_status=False,
         ):
             login_sq = self.db.objects.filter(
-                username=self.get_user_info(username),
+                user_id=user_qs,
                 uuid=uuid,
                 login_status=True
             ).first()
             self.db.objects.create(
-                username=self.get_user_info(username),
+                user_id=user_qs,
                 uuid=uuid,
                 peer_id=peer_id,
                 login_status=False,
@@ -413,7 +419,7 @@ class LoginClientService(BaseService):
         logger.info(f"更新登出状态: {username} - {uuid}")
 
     def get_login_client_list(self, username):
-        return self.db.objects.filter(username=self.get_user_info(username)).all()
+        return self.db.objects.filter(user_id=self.get_user_info(username).id).all()
 
 
 class TokenService(BaseService):
@@ -441,7 +447,7 @@ class TokenService(BaseService):
         user_qs = self.get_user_info(username)
         token = f"{get_randem_md5()}_{username}"
 
-        if qs := self.db.objects.filter(username=user_qs, uuid=uuid, client_type=client_type).first():
+        if qs := self.db.objects.filter(user_id=user_qs.id, uuid=uuid, client_type=client_type).first():
             qs.token = token
             qs.created_at = get_local_time()
             qs.last_used_at = get_local_time()
@@ -449,7 +455,7 @@ class TokenService(BaseService):
             logger.info(f"更新令牌: user: {username} uuid: {uuid} token: {token}")
         else:
             self.db.objects.create(
-                username=user_qs,
+                user_id=user_qs,
                 uuid=uuid,
                 token=token,
                 client_type=client_type,
@@ -491,9 +497,8 @@ class TokenService(BaseService):
         return res
 
     def delete_token_by_user(self, username: User | str):
-        if isinstance(username, User):
-            username = username.username
-        res = self.db.objects.filter(username=username).delete()
+        user = self.get_user_info(username)
+        res = self.db.objects.filter(user_id=user.id).delete()
         logger.info(f"通过用户名删除令牌: {username}")
         return res
 
@@ -740,8 +745,8 @@ class LogService(BaseService):
         :return: 新创建的日志实例
         """
         log = self.db.objects.create(
-            username=self.get_user_info(username),
-            uuid=self.get_peer_by_uuid(uuid),
+            user_id=self.get_user_info(username).id,
+            uuid=uuid,
             log_level=log_level,
             operation_type=log_type,  # 根据实际需求映射到合适的操作类型
             operation_object="log",  # 根据实际需求设置操作对象
@@ -790,12 +795,16 @@ class AuditConnService(BaseService):
         :param session_id:
         :return:
         """
+        if username:
+            user_id = self.get_user_info(username).id
+        else:
+            user_id = ''
         if action:
             if action == "new":
                 self.db.objects.create(
                     conn_id=conn_id,
                     action=action,
-                    controlled_uuid=self.get_peer_by_uuid(controlled_uuid),
+                    controlled_uuid=controlled_uuid,
                     initiating_ip=source_ip,
                     session_id=session_id,
                 )
@@ -807,23 +816,74 @@ class AuditConnService(BaseService):
                 self.db.objects.create(
                     conn_id=conn_id,
                     action=action,
-                    controlled_uuid=self.get_peer_by_uuid(controlled_uuid),
+                    controlled_uuid=controlled_uuid,
                     controller_uuid=connect_log.controlled_uuid,
                     initiating_ip=connect_log.initiating_ip,
                     session_id=session_id,
-                    username=connect_log.username,
+                    user_id=connect_log.user_id,
                     type=connect_log.type,
                 )
         else:
             self.db.objects.filter(conn_id=conn_id).update(
                 session_id=session_id,
-                controller_uuid=self.get_peer_by_peer_id(controller_peer_id),
-                username=self.get_user_info(username),
+                controller_uuid=controller_peer_id,
+                user_id=user_id,
                 type=type_,
             )
         logger.info(
             f'审计连接: conn_id="{conn_id}", action="{action}", controlled_uuid="{controlled_uuid}", source_ip="{source_ip}", session_id="{session_id}"'
         )
+
+
+class AuditFileLogService(BaseService):
+    """
+    审计文件服务类
+
+    用于处理审计文件相关的业务逻辑
+    """
+    db = AuditFileLog
+
+    @property
+    def conn_service(self):
+        return AuditConnService()
+
+    @property
+    def conn_id(self):
+        qs = self.conn_service.db.objects.first()
+        if qs.type == 1:
+            return qs.conn_id
+        return None
+
+    def log(
+            self,
+            source_id,
+            target_id,
+            target_uuid,
+            target_ip,
+            operation_type,
+            is_file,
+            remote_path,
+            file_info,
+            user_id,
+            file_num,
+    ):
+        res = self.db.objects.create(
+            conn_id=self.conn_id,
+            source_id=source_id,
+            target_id=target_id,
+            target_uuid=target_uuid,
+            target_ip=target_ip,
+            operation_type=operation_type,
+            is_file=is_file,
+            remote_path=remote_path,
+            file_info=file_info,
+            user_id=user_id,
+            file_num=file_num,
+        )
+        logger.info(
+            f'审计文件: source_id="{source_id}", target_id="{target_id}", target_uuid="{target_uuid}", operation_type="{operation_type}", is_file="{is_file}", remote_path="{remote_path}", user_id="{user_id}", file_num="{file_num}"'
+        )
+        return res
 
 
 class PersonalService(BaseService):
@@ -833,7 +893,7 @@ class PersonalService(BaseService):
         qs = self.get_user_info(create_user)
         personal = self.db.objects.create(
             personal_name=personal_name,
-            create_user=qs,
+            create_user_id=qs,
             personal_type=personal_type,
         )
         personal.personal_user.create(user=create_user)
@@ -857,6 +917,12 @@ class PersonalService(BaseService):
     def get_all_personal(self):
         return self.db.objects.all()
 
+    def get_peers_by_personal(self, guid):
+        personal = self.get_personal(guid=guid)
+        if personal:
+            return personal.personal_peer.all()
+        return []
+
     def delete_personal(self, guid):
         personal = self.get_personal(guid=guid)
         if personal and personal.personal_type != "private":
@@ -867,7 +933,7 @@ class PersonalService(BaseService):
 
     def add_personal_to_user(self, guid, username):
         user_qs = self.get_user_info(username)
-        res = self.get_personal(guid=guid).personal_user.create(username=user_qs)
+        res = self.get_personal(guid=guid).personal_user.create(user_id=user_qs)
         logger.info(f'分享地址簿给用户: {guid} - {username}')
         return res
 
@@ -875,7 +941,7 @@ class PersonalService(BaseService):
         user_qs = self.get_user_info(username)
         res = (
             self.get_personal(guid=guid)
-            .personal_user.filter(username=user_qs)
+            .personal_user.filter(user_id=user_qs)
             .delete()
         )
         logger.info(f'取消分享地址簿: guid={guid}, username={username}')
@@ -892,8 +958,7 @@ class PersonalService(BaseService):
 
         # 清掉alias
         alias_service = AliasService()
-        for peer in peers:
-            alias_service.set_alias(peer_id=peer.peer_id, guid=guid, alias="")
+        alias_service.delete_alias(*peers, guid=guid)
 
         # 清掉tag
         tag_service = TagService(guid=guid, user=user)
@@ -942,6 +1007,9 @@ class AliasService(BaseService):
             return {}
         rows = self.db.objects.filter(guid=guid, peer_id__in=peer_ids).values("peer_id", "alias")
         return {row["peer_id"]: row["alias"] for row in rows}
+
+    def delete_alias(self, *peer_ids, guid):
+        return self.db.objects.filter(guid=guid, peer_id__in=peer_ids).delete()
 
 
 class SharePersonalService(BaseService):

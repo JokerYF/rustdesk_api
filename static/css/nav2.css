@@ -94,6 +94,7 @@
 
 .nav2-table {
     width: 100%;
+    max-width: 1400px; /* 限制最大宽度，避免过于松散 */
     border-collapse: separate;
     border-spacing: 0;
     border: 1px solid #eaeef2;
