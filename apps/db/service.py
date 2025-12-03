@@ -401,7 +401,7 @@ class LoginClientService(BaseService):
                 peer_id=peer_id,
                 login_status=False,
         ):
-            login_sq = self.db.objects.filter(
+            login_qs = self.db.objects.filter(
                 user_id=user_qs,
                 uuid=uuid,
                 login_status=True
@@ -411,9 +411,9 @@ class LoginClientService(BaseService):
                 uuid=uuid,
                 peer_id=peer_id,
                 login_status=False,
-                client_type=login_sq.client_type,
-                platform=login_sq.platform,
-                client_name=login_sq.client_name,
+                client_type=login_qs.client_type,
+                platform=login_qs.platform,
+                client_name=login_qs.client_name,
             )
 
         logger.info(f"更新登出状态: {username} - {uuid}")
