@@ -240,7 +240,7 @@ def request_debug_log(func):
     return wrapper
 
 
-def debug_request_None(func):
+def debug_response_None(func):
     @wraps(func)
     def wrapper(request: HttpRequest, *args, **kwargs):
         # return func(request, *args, **kwargs)

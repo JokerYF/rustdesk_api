@@ -3,7 +3,7 @@ import logging
 from django.http import HttpRequest, JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 
-from apps.client_apis.common import request_debug_log, debug_request_None, check_login
+from apps.client_apis.common import request_debug_log, debug_response_None, check_login
 from apps.db.models import Personal
 from apps.db.service import TokenService, AliasService, TagService, PersonalService, SharePersonalService
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @request_debug_log
 @require_http_methods(["GET", "POST"])
 @check_login
-@debug_request_None
+@debug_response_None
 def ab(request: HttpRequest):
     # 好像在token失效后的残留页面会请求这个接口
     return None

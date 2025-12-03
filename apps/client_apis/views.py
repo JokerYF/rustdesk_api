@@ -6,7 +6,7 @@ from django.http import HttpRequest, JsonResponse, HttpResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from apps.client_apis.common import check_login, request_debug_log, debug_request_None
+from apps.client_apis.common import check_login, request_debug_log, debug_response_None
 from apps.db.models import PeerInfo
 from apps.db.service import HeartBeatService, PeerInfoService, TokenService, UserService, \
     LoginClientService
@@ -265,7 +265,7 @@ def peers(request: HttpRequest):
 
 @request_debug_log
 @require_http_methods(["GET"])
-@debug_request_None  # 官方对于设备组有权限控制，目前无法控制，直接返回None，接口不报错即可
+@debug_response_None  # 官方对于设备组有权限控制，目前无法控制，直接返回None，接口不报错即可
 @check_login
 def device_group_accessible(request):
     """

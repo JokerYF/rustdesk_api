@@ -401,7 +401,7 @@ class LoginClientService(BaseService):
                 peer_id=peer_id,
                 login_status=False,
         ):
-            login_sq = self.db.objects.filter(
+            login_qs = self.db.objects.filter(
                 user_id=user_qs,
                 uuid=uuid,
                 login_status=True
@@ -411,9 +411,9 @@ class LoginClientService(BaseService):
                 uuid=uuid,
                 peer_id=peer_id,
                 login_status=False,
-                client_type=login_sq.client_type,
-                platform=login_sq.platform,
-                client_name=login_sq.client_name,
+                client_type=login_qs.client_type,
+                platform=login_qs.platform,
+                client_name=login_qs.client_name,
             )
 
         logger.info(f"更新登出状态: {username} - {uuid}")
@@ -817,7 +817,7 @@ class AuditConnService(BaseService):
                     conn_id=conn_id,
                     action=action,
                     controlled_uuid=controlled_uuid,
-                    controller_uuid=connect_log.controlled_uuid,
+                    controller_uuid=connect_log.controller_uuid,
                     initiating_ip=connect_log.initiating_ip,
                     session_id=session_id,
                     user_id=connect_log.user_id,
@@ -826,7 +826,7 @@ class AuditConnService(BaseService):
         else:
             self.db.objects.filter(conn_id=conn_id).update(
                 session_id=session_id,
-                controller_uuid=controller_peer_id,
+                controller_uuid=self.get_peer_by_peer_id(controller_peer_id).uuid,
                 user_id=user_id,
                 type=type_,
             )
