@@ -10,7 +10,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from apps.client_apis.common import request_debug_log
-from apps.db.models import PeerInfo, HeartBeat, Alias, ClientTags, Personal
+from apps.db.models import PeerInfo, HeartBeat, Alias, ClientTags, Personal, Tag
+from apps.db.service import PersonalService, AliasService
 from apps.web.view_personal import is_default_personal
 
 
@@ -189,15 +190,6 @@ def nav_content(request: HttpRequest) -> HttpResponse:
             'q': q,
         })
     elif key == 'nav-4':  # 地址簿
-        # 分页参数
-        try:
-            page = int(request.GET.get('page', 1))
-        except (TypeError, ValueError):
-            page = 1
-        try:
-            page_size = int(request.GET.get('page_size', 20))
-        except (TypeError, ValueError):
-            page_size = 20
         # 搜索参数
         q = (request.GET.get('q') or '').strip()
         personal_type = (request.GET.get('type') or '').strip()
@@ -211,11 +203,10 @@ def nav_content(request: HttpRequest) -> HttpResponse:
         if personal_type in ('public', 'private'):
             personal_qs = personal_qs.filter(personal_type=personal_type)
 
-        paginator = Paginator(personal_qs, page_size)
-        page_obj = paginator.get_page(page)
-        personals = list(page_obj.object_list)
+        personals = list(personal_qs)
 
         # 为每个地址簿统计设备数量并标记是否为默认地址簿
+        default_personal = None
         for personal in personals:
             device_count = Alias.objects.filter(guid=personal).count()
             personal.device_count = device_count
@@ -226,11 +217,134 @@ def nav_content(request: HttpRequest) -> HttpResponse:
             else:
                 personal.display_name = personal.personal_name
 
+            # 找到默认地址簿
+            if personal.is_default:
+                default_personal = personal
+
+        # 如果没有默认地址簿，使用第一个地址簿
+        if not default_personal and personals:
+            default_personal = personals[0]
+
+        # 获取默认地址簿的详情、标签和设备
+        default_personal_detail = None
+        tags = []
+        devices = []
+        if default_personal:
+            # 获取地址簿详情
+            personal_service = PersonalService()
+            peers = personal_service.get_peers_by_personal(guid=default_personal.guid)
+
+            # 在线判定：心跳表 5 分钟内有记录视为在线
+            online_threshold = timezone.now() - timedelta(minutes=5)
+
+            # 获取所有peer的ID列表
+            peer_ids = [peer_info.peer.peer_id for peer_info in peers]
+
+            # 使用AliasService批量获取别名映射
+            alias_map = AliasService().get_alias_map(guid=default_personal.guid, peer_ids=peer_ids)
+
+            # 获取所有标签
+            tags = list(Tag.objects.filter(guid=default_personal.guid))
+
+            # 辅助函数：验证并修复颜色值
+            def validate_color(color):
+                # 如果颜色值无效，返回默认颜色
+                if not color:
+                    return '#2da44e'
+
+                # 如果颜色值是纯数字，尝试转换为十六进制颜色
+                if color.isdigit():
+                    # 将数字转换为6位十六进制颜色值
+                    hex_color = f'#{int(color):06x}'
+                    return hex_color
+
+                # 确保颜色值以 # 开头
+                if not color.startswith('#'):
+                    color = '#' + color
+
+                # 确保颜色值是有效的十六进制颜色
+                import re
+                if re.match(r'^#[0-9A-Fa-f]{6}$', color):
+                    return color
+
+                # 如果是3位十六进制颜色，转换为6位
+                if re.match(r'^#[0-9A-Fa-f]{3}$', color):
+                    # 将3位颜色转换为6位，如 #abc -> #aabbcc
+                    r = color[1]
+                    g = color[2]
+                    b = color[3]
+                    return f'#{r}{r}{g}{g}{b}{b}'
+
+                # 如果是8位十六进制颜色（带透明度），截取前6位
+                if re.match(r'^#[0-9A-Fa-f]{8}$', color):
+                    return color[:7]
+
+                # 其他情况返回默认颜色
+                return '#2da44e'
+
+            # 辅助函数：根据背景色计算合适的文字颜色
+            def get_text_color(background_color):
+                # 验证并修复颜色值
+                color = validate_color(background_color)
+                # 移除 # 前缀
+                color_hex = color.lstrip('#')
+                # 转换为 RGB
+                r = int(color_hex[0:2], 16)
+                g = int(color_hex[2:4], 16)
+                b = int(color_hex[4:6], 16)
+                # 计算亮度（使用相对 luminance 公式）
+                luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+                # 如果亮度大于 0.5，使用黑色文字，否则使用白色文字
+                return 'black' if luminance > 0.5 else 'white'
+
+            # 为每个标签添加合适的颜色和文字颜色
+            for tag in tags:
+                # 验证并修复颜色值
+                tag.valid_color = validate_color(tag.color)
+                # 计算文字颜色
+                tag.text_color = get_text_color(tag.valid_color)
+
+            for peer_info in peers:
+                peer = peer_info.peer
+                # 检查在线状态
+                is_online = HeartBeat.objects.filter(
+                    Q(peer_id=peer.peer_id) | Q(uuid=peer.uuid),
+                    modified_at__gte=online_threshold
+                ).exists()
+
+                # 获取该设备在该地址簿中的标签
+                client_tags = ClientTags.objects.filter(peer_id=peer.peer_id, guid=default_personal.guid).first()
+                device_tags_str = client_tags.tags if client_tags else ''
+                device_tags = device_tags_str.split(',') if device_tags_str else []
+
+                devices.append({
+                    'peer_id': peer.peer_id,
+                    'alias': alias_map.get(peer.peer_id, ''),  # 使用别名映射获取别名
+                    'tags': device_tags,
+                    'tags_str': device_tags_str,
+                    'device_name': peer.device_name,
+                    'os': peer.os,
+                    'version': peer.version,
+                    'is_online': is_online,
+                    'created_at': peer.created_at.strftime('%Y-%m-%d %H:%M:%S') if peer.created_at else '',
+                })
+
+            default_personal_detail = {
+                'guid': default_personal.guid,
+                'personal_name': default_personal.personal_name,
+                'display_name': default_personal.display_name,
+                'personal_type': default_personal.personal_type,
+                'created_at': default_personal.created_at.strftime(
+                    '%Y-%m-%d %H:%M:%S') if default_personal.created_at else '',
+                'device_count': len(devices),
+            }
+
         context.update({
             'personals': personals,
-            'paginator': paginator,
-            'page_obj': page_obj,
-            'page_size': page_size,
+            'default_personal': default_personal,
+            'default_personal_detail': default_personal_detail,
+            'tags': tags,
+            'devices': devices,
             'q': q,
             'personal_type': personal_type,
         })
@@ -429,3 +543,40 @@ def device_statuses(request: HttpRequest) -> JsonResponse:
     return JsonResponse({'ok': True, 'data': data})
 
 
+@request_debug_log
+@require_http_methods(['POST'])
+@login_required(login_url='web_login')
+def add_tag(request: HttpRequest) -> JsonResponse:
+    """
+    添加标签
+
+    :param request: Http 请求对象，POST 参数：
+        - tag: 标签名称
+        - color: 标签颜色
+        - guid: 地址簿GUID
+    :type request: HttpRequest
+    :return: JSON 响应，形如 {"ok": true}
+    :rtype: JsonResponse
+    """
+    tag_name = (request.POST.get('tag') or '').strip()
+    color = (request.POST.get('color') or '').strip()
+    guid = (request.POST.get('guid') or '').strip()
+
+    # 验证参数
+    if not tag_name:
+        return JsonResponse({'ok': False, 'err_msg': '标签名称不能为空'}, status=400)
+    if not color:
+        return JsonResponse({'ok': False, 'err_msg': '标签颜色不能为空'}, status=400)
+    if not guid:
+        return JsonResponse({'ok': False, 'err_msg': '地址簿GUID不能为空'}, status=400)
+
+    # 创建标签
+    try:
+        Tag.objects.create(
+            tag=tag_name,
+            color=color,
+            guid=guid
+        )
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'err_msg': f'添加标签失败：{str(e)}'}, status=500)

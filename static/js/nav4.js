@@ -15,7 +15,12 @@
     }
 
     function getModal() {
-        return APP.modal || {};
+        return APP.modal || {
+            open: function () {
+            },
+            close: function () {
+            }
+        };
     }
 
     function getConstants() {
@@ -289,14 +294,166 @@
         });
     }
 
+    /**
+     * 随机生成一个默认颜色
+     *
+     * :returns: 随机生成的十六进制颜色值
+     * :rtype: string
+     */
+    function getRandomColor() {
+        const colors = [
+            '#2da44e', '#0366d6', '#d73a49', '#6f42c1', '#e36209',
+            '#107c10', '#005a9e', '#da3633', '#8957e5', '#d83b01',
+            '#238636', '#0550ae', '#d13438', '#7952b3', '#e66a00'
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    /**
+     * 初始化添加标签功能
+     *
+     * :returns: 无
+     * :rtype: void
+     */
+    function initAddTag() {
+        const {open: openModal, close: closeModal} = getModal();
+        const {showToast, parseFetchError, getCookie} = getUtils();
+        const {URLS} = getConstants();
+
+        // 处理添加标签按钮点击事件
+        document.addEventListener('click', function (e) {
+            // 添加标签按钮点击事件
+            if (e.target.closest('.nav4-add-tag-btn')) {
+                // 设置随机默认颜色
+                const colorInput = document.getElementById('nav4-add-tag-color');
+                if (colorInput) {
+                    colorInput.value = getRandomColor();
+                }
+                // 清空表单
+                const nameInput = document.getElementById('nav4-add-tag-name');
+                if (nameInput) {
+                    nameInput.value = '';
+                }
+                // 打开模态框
+                openModal('nav4-add-tag-root');
+            }
+        });
+
+        // 处理添加标签表单提交事件
+        document.addEventListener('submit', function (e) {
+            if (e.target.id === 'nav4-add-tag-form') {
+                e.preventDefault();
+                const form = e.target;
+                const formData = new FormData(form);
+                const tag = formData.get('tag')?.trim();
+                const color = formData.get('color')?.trim();
+                const guid = formData.get('guid')?.trim();
+
+                // 验证表单
+                if (!tag) {
+                    showToast('标签名称不能为空', 'error');
+                    return;
+                }
+                if (!color) {
+                    showToast('标签颜色不能为空', 'error');
+                    return;
+                }
+                if (!guid) {
+                    showToast('地址簿GUID不能为空', 'error');
+                    return;
+                }
+
+                // 提交表单
+                const csrf = getCookie('csrftoken');
+                const body = new URLSearchParams();
+                body.set('tag', tag);
+                body.set('color', color);
+                body.set('guid', guid);
+
+                fetch('/personal/add-tag', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'X-CSRFToken': csrf
+                    },
+                    body: body.toString()
+                }).then(resp => {
+                    if (!resp.ok) return parseFetchError(resp);
+                    return resp.json();
+                }).then(data => {
+                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '添加标签失败');
+                    showToast('标签添加成功', 'success');
+                    closeModal('nav4-add-tag-root');
+                    // 刷新页面或重新加载内容
+                    window.location.reload();
+                }).catch(err => {
+                    showToast(err.message || '添加标签失败，请稍后重试', 'error');
+                });
+            }
+        });
+    }
+
+    /**
+     * 初始化编辑标签功能
+     *
+     * :returns: 无
+     * :rtype: void
+     */
+    function initEditTag() {
+        const {open: openModal, close: closeModal} = getModal();
+        const {showToast, parseFetchError, getCookie} = getUtils();
+        const {URLS} = getConstants();
+
+        // 处理编辑标签按钮点击事件
+        document.addEventListener('click', function (e) {
+            // 编辑标签按钮点击事件
+            if (e.target.closest('.nav4-edit-tag-btn')) {
+                const btn = e.target.closest('.nav4-edit-tag-btn');
+                const tagItem = btn.closest('.nav4-tag-item');
+                if (tagItem) {
+                    const tagId = tagItem.getAttribute('data-tag-id');
+                    const tagName = tagItem.getAttribute('data-tag-name');
+                    // 设置表单值
+                    const idInput = document.getElementById('nav4-edit-tag-id');
+                    const nameInput = document.getElementById('nav4-edit-tag-name');
+                    if (idInput) idInput.value = tagId || '';
+                    if (nameInput) nameInput.value = tagName || '';
+                    // 打开模态框
+                    openModal('nav4-edit-tag-root');
+                }
+            }
+        });
+    }
+
+    /**
+     * 初始化所有地址簿功能
+     *
+     * :returns: 无
+     * :rtype: void
+     */
+    function initNav4() {
+        initAddTag();
+        initEditTag();
+    }
+
     // 导出到全局
     APP.nav4 = {
         collectQueryOptions,
         renderDetailHTML,
         fetchAndShowDetail,
         startInlineEdit,
-        showAddDeviceModal
+        showAddDeviceModal,
+        initNav4
     };
+
+    // 监听内容加载完成事件，初始化地址簿功能
+    document.addEventListener('contentLoaded', function (e) {
+        if (e.detail && e.detail.key === 'nav-4') {
+            initNav4();
+        }
+    });
 
     window.APP = APP;
 

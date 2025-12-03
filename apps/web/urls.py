@@ -26,4 +26,7 @@ urlpatterns = [
     path('personal/remove-device', view_personal.remove_device_from_personal, name='web_personal_remove_device'),
     path('personal/update-alias', view_personal.update_device_alias_in_personal, name='web_personal_update_alias'),
     path('personal/update-tags', view_personal.update_device_tags_in_personal, name='web_personal_update_tags'),
+    path('personal/add-tag', view_personal.add_tag, name='web_personal_add_tag'),
+    path('personal/edit-tag', view_personal.edit_tag, name='web_personal_edit_tag'),
+    path('personal/delete-tag', view_personal.delete_tag, name='web_personal_delete_tag'),
 ]

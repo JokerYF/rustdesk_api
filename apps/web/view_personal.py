@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from apps.client_apis.common import request_debug_log
-from apps.db.models import Personal, Alias, HeartBeat, ClientTags, PeerInfo
+from apps.db.models import Personal, Alias, HeartBeat, ClientTags, PeerInfo, Tag
 from apps.db.service import PersonalService, AliasService
 
 
@@ -379,5 +379,113 @@ def update_device_tags_in_personal(request: HttpRequest) -> JsonResponse:
             tags=tags_text,
             guid=guid
         )
+
+    return JsonResponse({'ok': True})
+
+
+@request_debug_log
+@require_http_methods(['POST'])
+@login_required(login_url='web_login')
+def add_tag(request: HttpRequest) -> JsonResponse:
+    """
+    添加标签
+
+    :param request: POST，包含 guid, tag, color
+    :return: {"ok": true, "data": {"id": tag.id}}
+    """
+    guid = (request.POST.get('guid') or '').strip()
+    tag_name = (request.POST.get('tag') or '').strip()
+    color = (request.POST.get('color') or '#2da44e').strip()
+
+    if not guid or not tag_name:
+        return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
+
+    # 验证地址簿权限
+    personal = Personal.objects.filter(guid=guid, create_user_id=request.user.id).first()
+    if not personal:
+        return JsonResponse({'ok': False, 'err_msg': '地址簿不存在或无权限操作'}, status=404)
+
+    # 检查标签是否已存在
+    existing_tag = Tag.objects.filter(tag=tag_name, guid=guid).first()
+    if existing_tag:
+        return JsonResponse({'ok': False, 'err_msg': '标签已存在'}, status=400)
+
+    # 创建标签
+    tag = Tag.objects.create(
+        tag=tag_name,
+        color=color,
+        guid=guid
+    )
+
+    return JsonResponse({'ok': True, 'data': {'id': tag.id}})
+
+
+@request_debug_log
+@require_http_methods(['POST'])
+@login_required(login_url='web_login')
+def edit_tag(request: HttpRequest) -> JsonResponse:
+    """
+    编辑标签
+
+    :param request: POST，包含 tag_id, tag, color
+    :return: {"ok": true}
+    """
+    tag_id = (request.POST.get('tag_id') or '').strip()
+    tag_name = (request.POST.get('tag') or '').strip()
+    color = (request.POST.get('color') or '#2da44e').strip()
+
+    if not tag_id or not tag_name:
+        return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
+
+    # 验证标签存在
+    tag = Tag.objects.filter(id=tag_id).first()
+    if not tag:
+        return JsonResponse({'ok': False, 'err_msg': '标签不存在'}, status=404)
+
+    # 验证地址簿权限
+    personal = Personal.objects.filter(guid=tag.guid, create_user_id=request.user.id).first()
+    if not personal:
+        return JsonResponse({'ok': False, 'err_msg': '无权限操作该标签'}, status=404)
+
+    # 检查标签名称是否已存在（排除当前标签）
+    existing_tag = Tag.objects.filter(tag=tag_name, guid=tag.guid).exclude(id=tag_id).first()
+    if existing_tag:
+        return JsonResponse({'ok': False, 'err_msg': '标签名称已存在'}, status=400)
+
+    # 更新标签
+    tag.tag = tag_name
+    tag.color = color
+    tag.save(update_fields=['tag', 'color'])
+
+    return JsonResponse({'ok': True})
+
+
+@request_debug_log
+@require_http_methods(['POST'])
+@login_required(login_url='web_login')
+def delete_tag(request: HttpRequest) -> JsonResponse:
+    """
+    删除标签
+
+    :param request: POST，包含 tag_id
+    :return: {"ok": true}
+    """
+    tag_id = (request.POST.get('tag_id') or '').strip()
+
+    if not tag_id:
+        return JsonResponse({'ok': False, 'err_msg': '参数错误'}, status=400)
+
+    # 验证标签存在
+    tag = Tag.objects.filter(id=tag_id).first()
+    if not tag:
+        return JsonResponse({'ok': False, 'err_msg': '标签不存在'}, status=404)
+
+    # 验证地址簿权限
+    personal = Personal.objects.filter(guid=tag.guid, create_user_id=request.user.id).first()
+    if not personal:
+        return JsonResponse({'ok': False, 'err_msg': '无权限操作该标签'}, status=404)
+
+    # 删除标签
+    tag.delete()
 
     return JsonResponse({'ok': True})
