@@ -826,7 +826,7 @@ class AuditConnService(BaseService):
         else:
             self.db.objects.filter(conn_id=conn_id).update(
                 session_id=session_id,
-                controller_uuid=controller_peer_id,
+                controller_uuid=self.get_peer_by_peer_id(controller_peer_id).uuid,
                 user_id=user_id,
                 type=type_,
             )
