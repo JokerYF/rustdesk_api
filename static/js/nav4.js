@@ -55,10 +55,56 @@
      */
     function renderDetailHTML(detail) {
         const {ICONS} = getConstants();
-        let devicesHtml = '';
+
+        // 收集所有标签
+        const tagsMap = {};
         if (detail.devices && detail.devices.length > 0) {
-            devicesHtml = '<table class="nav2-table" style="margin-top:16px;"><thead><tr>' +
-                '<th>设备ID</th><th>别名</th><th>标签</th><th>设备名</th><th>系统</th><th>状态</th><th>操作</th>' +
+            detail.devices.forEach(d => {
+                const tags = Array.isArray(d.tags) ? d.tags : (d.tags ? d.tags.split(',').map(t => t.trim()) : []);
+                tags.forEach(tag => {
+                    if (tag) {
+                        if (!tagsMap[tag]) {
+                            tagsMap[tag] = [];
+                        }
+                        tagsMap[tag].push(d.peer_id);
+                    }
+                });
+            });
+        }
+
+        // 左侧：标签信息
+        let tagsHtml = '<div class="nav4-tags-section">' +
+            '<h4 style="margin:0 0 12px 0;font-size:14px;font-weight:600;color:#0b3d60;">标签列表</h4>';
+
+        const tagsList = Object.keys(tagsMap);
+        if (tagsList.length > 0) {
+            tagsHtml += '<div class="nav4-tags-list">';
+            tagsList.forEach(tag => {
+                const count = tagsMap[tag].length;
+                tagsHtml += '<div class="nav4-tag-item" data-tag="' + tag + '">' +
+                    '<span class="nav4-tag-name">' + tag + '</span>' +
+                    '<span class="nav4-tag-count">(' + count + ')</span>' +
+                    '</div>';
+            });
+            tagsHtml += '</div>';
+        } else {
+            tagsHtml += '<div style="color:#8a939e;font-size:14px;">暂无标签</div>';
+        }
+        tagsHtml += '</div>';
+
+        // 右侧：设备信息
+        let devicesHtml = '<div class="nav4-devices-section">' +
+            '<h4 style="margin:0 0 12px 0;font-size:14px;font-weight:600;color:#0b3d60;">设备列表</h4>';
+
+        if (detail.devices && detail.devices.length > 0) {
+            devicesHtml += '<div class="x-scroll-container"><table class="nav2-table"><thead><tr>' +
+                '<th style="width:150px;">设备ID</th>' +
+                '<th style="width:120px;">别名</th>' +
+                '<th style="width:150px;">标签</th>' +
+                '<th style="width:120px;">设备名</th>' +
+                '<th style="width:80px;">系统</th>' +
+                '<th style="width:80px;">状态</th>' +
+                '<th style="width:100px;">操作</th>' +
                 '</tr></thead><tbody>';
             detail.devices.forEach(d => {
                 const statusClass = d.is_online ? 'online' : 'offline';
@@ -84,21 +130,28 @@
                     '<td><button type="button" class="nav2-link nav4-remove-device-btn" data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '">移除</button></td>' +
                     '</tr>';
             });
-            devicesHtml += '</tbody></table>';
+            devicesHtml += '</tbody></table></div>';
         } else {
-            devicesHtml = '<div style="color:#6a737d;margin-top:16px;">暂无设备</div>';
+            devicesHtml += '<div style="color:#8a939e;font-size:14px;">暂无设备</div>';
         }
+        devicesHtml += '</div>';
 
+        // 组合成左右布局
         const typeText = detail.personal_type === 'public' ? '公开' : '私有';
         const displayName = detail.display_name || detail.personal_name || '-';
         return (
-            '<dl style="margin:0;">' +
-            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">地址簿名称</dt><dd style="margin:0;">' + displayName + '</dd></div>' +
-            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">类型</dt><dd style="margin:0;">' + typeText + '</dd></div>' +
-            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">设备数量</dt><dd style="margin:0;">' + (detail.device_count || 0) + '</dd></div>' +
-            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">创建时间</dt><dd style="margin:0;">' + (detail.created_at || '-') + '</dd></div>' +
+            '<div style="margin-bottom:16px;">' +
+            '<dl style="margin:0;display:flex;flex-wrap:wrap;gap:16px;">' +
+            '<div style="display:flex;gap:8px;"><dt style="min-width:88px;color:#6a737d;">地址簿名称</dt><dd style="margin:0;">' + displayName + '</dd></div>' +
+            '<div style="display:flex;gap:8px;"><dt style="min-width:88px;color:#6a737d;">类型</dt><dd style="margin:0;">' + typeText + '</dd></div>' +
+            '<div style="display:flex;gap:8px;"><dt style="min-width:88px;color:#6a737d;">设备数量</dt><dd style="margin:0;">' + (detail.device_count || 0) + '</dd></div>' +
+            '<div style="display:flex;gap:8px;"><dt style="min-width:88px;color:#6a737d;">创建时间</dt><dd style="margin:0;">' + (detail.created_at || '-') + '</dd></div>' +
             '</dl>' +
-            devicesHtml
+            '</div>' +
+            '<div class="nav4-detail-layout">' +
+            tagsHtml +
+            devicesHtml +
+            '</div>'
         );
     }
 

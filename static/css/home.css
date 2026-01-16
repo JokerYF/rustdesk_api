@@ -134,6 +134,10 @@ body {
     width: min(880px, 92vw);
 }
 
+.modal--xl {
+    width: min(1200px, 92vw);
+}
+
 .modal-header {
     display: flex;
     align-items: center;

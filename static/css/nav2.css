@@ -207,4 +207,89 @@
     }
 }
 
+/* nav-4 地址簿详情左右布局 */
+.nav4-detail-layout {
+    display: flex;
+    gap: 20px;
+    margin-top: 16px;
+    min-height: 400px;
+}
+
+.nav4-tags-section {
+    flex: 0 0 280px;
+    min-width: 200px;
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 16px;
+    background: #f7f8fa;
+    border: 1px solid #eaeef2;
+    border-radius: 8px;
+}
+
+.nav4-devices-section {
+    flex: 1;
+    min-width: 0;
+}
+
+.nav4-tags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nav4-tag-item {
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid #eaeef2;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.nav4-tag-item:hover {
+    background: #f9fbff;
+    border-color: #1f6feb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.nav4-tag-item.active {
+    background: #e7f2ff;
+    border-color: #1f6feb;
+    font-weight: 500;
+}
+
+.nav4-tag-name {
+    font-size: 14px;
+    color: #24292e;
+    word-break: break-word;
+}
+
+.nav4-tag-count {
+    font-size: 12px;
+    color: #6a737d;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+
+/* 设备表格行高亮 */
+.nav4-devices-section .nav2-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+/* 响应式布局 */
+@media (max-width: 1024px) {
+    .nav4-detail-layout {
+        flex-direction: column;
+    }
+
+    .nav4-tags-section {
+        flex: 1;
+        max-height: 300px;
+    }
+}
+
 

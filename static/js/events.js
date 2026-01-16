@@ -711,11 +711,7 @@
             if (!action || !guid) return;
 
             if (action === 'view') {
-                const {
-                    collectQueryOptions: collectQueryOptions4,
-                    fetchAndShowDetail: fetchAndShowDetail4,
-                    startInlineEdit: startInlineEdit4
-                } = getNav4();
+                const {fetchAndShowDetail} = getNav4();
                 fetchAndShowDetail(guid);
             } else if (action === 'rename') {
                 const guidEl = document.getElementById('nav4-rename-guid');
@@ -831,11 +827,7 @@
                 return resp.json();
             }).then(data => {
                 if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '移除失败');
-                const {
-                    collectQueryOptions: collectQueryOptions4,
-                    fetchAndShowDetail: fetchAndShowDetail4,
-                    startInlineEdit: startInlineEdit4
-                } = getNav4();
+                const {fetchAndShowDetail} = getNav4();
                 fetchAndShowDetail(guid);
                 showToast('移除成功', 'success');
             }).catch(err => {
@@ -854,12 +846,48 @@
             const cell = btn.closest('.nav4-editable-cell');
             if (!cell || !field || !guid || !peerId) return;
             if (cell.querySelector('input[type="text"]')) return;
-            const {
-                collectQueryOptions: collectQueryOptions4,
-                fetchAndShowDetail: fetchAndShowDetail4,
-                startInlineEdit: startInlineEdit4
-            } = getNav4();
+            const {startInlineEdit} = getNav4();
             startInlineEdit(cell, field, guid, peerId);
+        }, false);
+
+        // nav-4 标签点击过滤设备
+        contentEl.addEventListener('click', function (e) {
+            const tagItem = e.target.closest('.nav4-tag-item');
+            if (!tagItem) return;
+            e.preventDefault();
+
+            const tagName = tagItem.getAttribute('data-tag');
+            const detailBody = document.getElementById('nav4-detail-body');
+            if (!detailBody) return;
+
+            // 切换激活状态
+            const isActive = tagItem.classList.contains('active');
+
+            // 移除所有标签的激活状态
+            detailBody.querySelectorAll('.nav4-tag-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // 移除所有设备行的高亮状态
+            detailBody.querySelectorAll('.nav2-table tbody tr').forEach(row => {
+                row.style.background = '';
+            });
+
+            // 如果之前未激活，则激活当前标签并高亮对应设备
+            if (!isActive && tagName) {
+                tagItem.classList.add('active');
+
+                // 高亮包含该标签的设备行
+                detailBody.querySelectorAll('.nav2-table tbody tr').forEach(row => {
+                    const tagsCell = row.querySelector('[data-field="tags"] .nav2-detail-text');
+                    if (tagsCell) {
+                        const deviceTags = tagsCell.textContent.split(',').map(t => t.trim());
+                        if (deviceTags.includes(tagName)) {
+                            row.style.background = '#fff8e1';
+                        }
+                    }
+                });
+            }
         }, false);
 
         // 添加设备到地址簿表单提交
