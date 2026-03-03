@@ -37,19 +37,31 @@ def time_test(request: HttpRequest):
 @request_debug_log
 @require_http_methods(["POST"])
 def heartbeat(request: HttpRequest):
-    request_data = json.loads(request.body.decode('utf-8'))
-    uuid = request_data.get('uuid')
-    peer_id = request_data.get('id')
-    modified_at = request_data.get('modified_at', get_local_time())
-    ver = request_data.get('ver')
+    try:
+        request_data = json.loads(request.body.decode('utf-8'))
+        uuid = request_data.get('uuid')
+        peer_id = request_data.get('id')
+        modified_at = request_data.get('modified_at', get_local_time())
+        ver = request_data.get('ver')
 
-    HeartBeatService().update(
-        uuid=uuid,
-        peer_id=peer_id,
-        modified_at=modified_at,
-        ver=ver,
-    )
-    return HttpResponse(status=200)
+        if not uuid or not peer_id:
+            logger.warning(f"心跳请求缺少必要参数: uuid={uuid}, peer_id={peer_id}")
+            return HttpResponse(status=400)
+
+        HeartBeatService().update(
+            uuid=uuid,
+            peer_id=peer_id,
+            modified_at=modified_at,
+            ver=ver,
+        )
+        return HttpResponse(status=200)
+    except json.JSONDecodeError as e:
+        logger.error(f"心跳请求JSON解析失败: {e}")
+        return HttpResponse(status=400)
+    except Exception as e:
+        logger.error(f"心跳请求处理失败: {e}")
+        logger.error(traceback.format_exc())
+        return HttpResponse(status=500)
 
 
 @request_debug_log

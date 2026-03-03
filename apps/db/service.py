@@ -332,10 +332,24 @@ class HeartBeatService(BaseService):
         kwargs["timestamp"] = get_local_time()
         kwargs["uuid"] = uuid
         peer_id = kwargs.get("peer_id")
+        try:
+            with transaction.atomic():
+                # 使用 get_or_create 避免竞态条件
+                obj, created = self.db.objects.get_or_create(
+                    uuid=uuid,
+                    defaults=kwargs
+                )
+                if not created:
+                    # 更新已存在的记录
+                    for key, value in kwargs.items():
+                        setattr(obj, key, value)
+                    obj.save(update_fields=list(kwargs.keys()))
 
-        if not self.db.objects.filter(Q(uuid=uuid) | Q(peer_id=peer_id)).update(**kwargs):
-            self.db.objects.create(**kwargs)
-        logger.info(f"更新心跳: {kwargs}")
+            action = "创建" if created else "更新"
+            logger.info(f"{action}心跳: uuid={uuid}, peer_id={peer_id}")
+        except Exception as e:
+            logger.error(f"更新心跳失败: uuid={uuid}, peer_id={peer_id}, error={e}")
+            raise
 
     def is_alive(self, uuid, timeout=60):
         client = self.db.objects.filter(uuid=uuid).first()
