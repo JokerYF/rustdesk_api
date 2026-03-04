@@ -1,12 +1,13 @@
 import ast
 import json
 import logging
+import time
 from datetime import timedelta
 from typing import TypeVar
 
 from django.contrib.auth.models import User, Group
 from django.db import models
-from django.db import transaction
+from django.db import transaction, OperationalError
 from django.db.models import Q
 from django.http import HttpRequest
 
@@ -320,36 +321,38 @@ class PeerInfoService(BaseService):
 class HeartBeatService(BaseService):
     db = HeartBeat
 
+    MAX_RETRIES = 3
+    RETRY_BACKOFF = 0.15  # 秒，每次重试翻倍
+
     def update(self, uuid, **kwargs):
         """
-        更新或创建心跳记录
+        更新或创建心跳记录，带 SQLite 锁重试。
 
         :param uuid: 设备UUID
         :param kwargs: 需要更新的字段，如 peer_id、ver 等
-        :returns:
         """
         kwargs["modified_at"] = get_local_time()
         kwargs["timestamp"] = get_local_time()
         kwargs["uuid"] = uuid
         peer_id = kwargs.get("peer_id")
-        try:
-            with transaction.atomic():
-                # 使用 get_or_create 避免竞态条件
-                obj, created = self.db.objects.get_or_create(
-                    uuid=uuid,
-                    defaults=kwargs
-                )
-                if not created:
-                    # 更新已存在的记录
-                    for key, value in kwargs.items():
-                        setattr(obj, key, value)
-                    obj.save(update_fields=list(kwargs.keys()))
 
-            action = "创建" if created else "更新"
-            logger.info(f"{action}心跳: uuid={uuid}, peer_id={peer_id}")
-        except Exception as e:
-            logger.error(f"更新心跳失败: uuid={uuid}, peer_id={peer_id}, error={e}")
-            raise
+        last_exc = None
+        for attempt in range(1, self.MAX_RETRIES + 1):
+            try:
+                with transaction.atomic():
+                    if not self.db.objects.filter(Q(uuid=uuid) | Q(peer_id=peer_id)).update(**kwargs):
+                        self.db.objects.create(**kwargs)
+                return
+            except OperationalError as e:
+                last_exc = e
+                if "locked" not in str(e).lower():
+                    raise
+                wait = self.RETRY_BACKOFF * (2 ** (attempt - 1))
+                logger.warning(f"心跳写入被锁，第{attempt}次重试 (等待{wait:.2f}s): uuid={uuid}")
+                time.sleep(wait)
+
+        logger.error(f"心跳写入最终失败 ({self.MAX_RETRIES}次重试): uuid={uuid}, error={last_exc}")
+        raise last_exc
 
     def is_alive(self, uuid, timeout=60):
         client = self.db.objects.filter(uuid=uuid).first()

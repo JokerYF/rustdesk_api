@@ -2,6 +2,7 @@ import json
 import logging
 import traceback
 
+from django.db import OperationalError
 from django.http import HttpRequest, JsonResponse, HttpResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -58,6 +59,9 @@ def heartbeat(request: HttpRequest):
     except json.JSONDecodeError as e:
         logger.error(f"心跳请求JSON解析失败: {e}")
         return HttpResponse(status=400)
+    except OperationalError as e:
+        logger.warning(f"心跳请求数据库繁忙: {e}")
+        return HttpResponse(status=503)
     except Exception as e:
         logger.error(f"心跳请求处理失败: {e}")
         logger.error(traceback.format_exc())
