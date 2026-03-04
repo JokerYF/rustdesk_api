@@ -14,7 +14,7 @@
         <button type="submit" class="nav2-btn nav2-primary">搜索</button>
         <button type="button" class="nav2-btn nav4-reset-btn">重置</button>
     </form>
-    <div style="margin-left:auto;">
+    <div class="nav2-toolbar-actions">
         <button type="button" class="nav2-btn nav2-primary nav4-create-btn">新建地址簿</button>
     </div>
 </div>
@@ -80,7 +80,7 @@
                 {% if page_obj.has_previous %}data-page="{{ page_obj.previous_page_number }}"{% else %}data-page=""
                 disabled{% endif %}>上一页
         </button>
-        <span style="color:#6a737d;">第 {{ page_obj.number }} / {{ paginator.num_pages }} 页（共 {{ paginator.count }} 条）</span>
+        <span class="nav2-pagination-info">第 {{ page_obj.number }} / {{ paginator.num_pages }} 页（共 {{ paginator.count }} 条）</span>
         <button class="nav2-btn nav4-page-btn" data-key="nav-4"
                 {% if page_obj.has_next %}data-page="{{ page_obj.next_page_number }}"{% else %}data-page=""
                 disabled{% endif %}>下一页
@@ -96,13 +96,13 @@
         <div class="modal-header">
             <h3 id="nav4-create-title" class="modal-title">新建地址簿</h3>
             <button type="button" class="modal-close" data-close="nav4-create" aria-label="关闭">
-                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
+                <img src="{% static 'icons/close.svg' %}" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
         <div class="modal-body">
             <form id="nav4-create-form">
                 <div class="nav2-form-row">
-                    <label for="nav4-create-name" style="min-width:88px;color:#6a737d;">地址簿名称</label>
+                    <label for="nav4-create-name">地址簿名称</label>
                     <input class="nav2-input nav2-input-full" type="text" name="personal_name" id="nav4-create-name"
                            placeholder="请输入地址簿名称" required>
                 </div>
@@ -113,7 +113,7 @@
                 {#                        <option value="public">公开</option>#}
                 {#                    </select>#}
                 {#                </div>#}
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <div class="nav2-form-actions">
                     <button type="button" class="nav2-btn" data-close="nav4-create">取消</button>
                     <button type="submit" class="nav2-btn nav2-primary">创建</button>
                 </div>
@@ -128,18 +128,18 @@
         <div class="modal-header">
             <h3 id="nav4-rename-title" class="modal-title">重命名地址簿</h3>
             <button type="button" class="modal-close" data-close="nav4-rename" aria-label="关闭">
-                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
+                <img src="{% static 'icons/close.svg' %}" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
         <div class="modal-body">
             <form id="nav4-rename-form">
                 <input type="hidden" name="guid" id="nav4-rename-guid">
                 <div class="nav2-form-row">
-                    <label for="nav4-rename-name" style="min-width:88px;color:#6a737d;">新名称</label>
+                    <label for="nav4-rename-name">新名称</label>
                     <input class="nav2-input nav2-input-full" type="text" name="new_name" id="nav4-rename-name"
                            placeholder="请输入新名称" required>
                 </div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <div class="nav2-form-actions">
                     <button type="button" class="nav2-btn" data-close="nav4-rename">取消</button>
                     <button type="submit" class="nav2-btn nav2-primary">保存</button>
                 </div>
@@ -154,7 +154,7 @@
         <div class="modal-header">
             <h3 id="nav4-detail-title" class="modal-title">地址簿详情</h3>
             <button type="button" class="modal-close" data-close="nav4-detail" aria-label="关闭">
-                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
+                <img src="{% static 'icons/close.svg' %}" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
         <div class="modal-body" id="nav4-detail-body">
@@ -169,7 +169,7 @@
         <div class="modal-header">
             <h3 id="nav4-add-device-title" class="modal-title">添加设备到地址簿</h3>
             <button type="button" class="modal-close" data-close="nav4-add-device" aria-label="关闭">
-                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
+                <img src="{% static 'icons/close.svg' %}" width="16" height="16" alt="" aria-hidden="true">
             </button>
         </div>
         <div class="modal-body">
@@ -177,15 +177,15 @@
                 <input type="hidden" name="guid" id="nav4-add-device-guid">
                 <input type="hidden" name="peer_id" id="nav4-add-device-peer-id">
                 <div class="nav2-form-row">
-                    <label style="min-width:88px;color:#6a737d;">设备ID</label>
-                    <span id="nav4-add-device-peer-id-display" style="color:#24292e;"></span>
+                    <label>设备ID</label>
+                    <span id="nav4-add-device-peer-id-display"></span>
                 </div>
                 <div class="nav2-form-row">
-                    <label for="nav4-add-device-alias" style="min-width:88px;color:#6a737d;">设备别名</label>
+                    <label for="nav4-add-device-alias">设备别名</label>
                     <input class="nav2-input nav2-input-full" type="text" name="alias" id="nav4-add-device-alias"
                            placeholder="请输入设备别名(可选)">
                 </div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <div class="nav2-form-actions">
                     <button type="button" class="nav2-btn" data-close="nav4-add-device">取消</button>
                     <button type="submit" class="nav2-btn nav2-primary">添加</button>
                 </div>

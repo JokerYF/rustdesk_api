@@ -9,7 +9,6 @@
 
     const APP = window.APP || {};
 
-    // 延迟获取依赖，避免模块加载顺序问题
     function getUtils() {
         return APP.utils || {};
     }
@@ -42,18 +41,27 @@
     }
 
     /**
-     * 初始化所有事件监听
+     * 重新加载指定导航页内容并记住导航状态
      *
-     * :returns: 无
-     * :rtype: void
+     * :param {string} navKey: 导航标识
+     * :param {Object} extra: 额外查询参数
      */
+    function reloadNav(navKey, extra) {
+        const {renderContent} = getNavigation();
+        const {STORAGE_KEY} = getConstants();
+        renderContent(navKey, extra);
+        try {
+            localStorage.setItem(STORAGE_KEY, navKey);
+        } catch (_) { /* localStorage 不可用时静默处理 */
+        }
+    }
+
     function init() {
         const contentEl = document.getElementById('content');
         if (!contentEl) return;
 
         // ========== 通用事件 ==========
 
-        // 通用弹窗关闭按钮
         contentEl.addEventListener('click', function (e) {
             const {close: closeModal} = getModal();
             const closeBtn = e.target.closest('[data-close]');
@@ -65,7 +73,6 @@
             closeModal(rootId);
         }, false);
 
-        // 点击遮罩关闭弹窗
         contentEl.addEventListener('click', function (e) {
             const backdrop = e.target.closest('.modal-backdrop');
             if (!backdrop) return;
@@ -75,7 +82,6 @@
             }
         }, false);
 
-        // ESC键关闭弹窗
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 const {closeAll: closeAllModals} = getModal();
@@ -85,64 +91,38 @@
 
         // ========== nav-1 事件 ==========
 
-        // nav-1 分页
         contentEl.addEventListener('click', function (e) {
-            const {renderContent} = getNavigation();
-            const {STORAGE_KEY} = getConstants();
             const btn = e.target.closest('.nav1-page-btn');
             if (!btn) return;
             e.preventDefault();
             const page = btn.dataset.page;
             const key = btn.dataset.key || 'nav-1';
-            if (page) {
-                renderContent(key, {page});
-                try {
-                    localStorage.setItem(STORAGE_KEY, key);
-                } catch (e) {
-                }
-            }
+            if (page) reloadNav(key, {page});
         }, false);
 
         // ========== nav-2 事件 ==========
 
-        // nav-2 分页
         contentEl.addEventListener('click', function (e) {
-            const {renderContent} = getNavigation();
-            const {collectQueryOptions} = getNav2();
-            const {STORAGE_KEY} = getConstants();
             const btn = e.target.closest('.nav2-page-btn');
             if (!btn) return;
             e.preventDefault();
             const page = btn.dataset.page;
             const key = btn.dataset.key || 'nav-2';
             if (page) {
-                const formEl = document.getElementById('nav2-search-form');
-                const extra = collectQueryOptions(formEl);
+                const {collectQueryOptions} = getNav2();
+                const extra = collectQueryOptions(document.getElementById('nav2-search-form'));
                 extra.page = page;
-                renderContent(key, extra);
-                try {
-                    localStorage.setItem(STORAGE_KEY, key);
-                } catch (e) {
-                }
+                reloadNav(key, extra);
             }
         }, false);
 
-        // nav-2 重置
         contentEl.addEventListener('click', function (e) {
-            const {renderContent} = getNavigation();
-            const {STORAGE_KEY} = getConstants();
             const btn = e.target.closest('.nav2-reset-btn');
             if (!btn) return;
             e.preventDefault();
-            const key = 'nav-2';
-            renderContent(key);
-            try {
-                localStorage.setItem(STORAGE_KEY, key);
-            } catch (e) {
-            }
+            reloadNav('nav-2');
         }, false);
 
-        // nav-2 全选
         contentEl.addEventListener('change', function (e) {
             const target = e.target;
             if (target && target.id === 'nav2-select-all') {
@@ -153,17 +133,13 @@
             }
         }, false);
 
-        // nav-2 批量操作
         contentEl.addEventListener('click', function (e) {
             const btn = e.target.closest('.nav2-bulk-btn');
             if (!btn) return;
             e.preventDefault();
-            const action = btn.dataset.action || '';
-            const selected = Array.from(document.querySelectorAll('.nav2-row-checkbox:checked')).map(cb => cb.value);
-            console.log('nav-2 bulk action:', action, selected);
+            // TODO: 实现批量操作逻辑
         }, false);
 
-        // nav-2 行级操作
         contentEl.addEventListener('click', function (e) {
             const {fetchAndShowDetail, prefillRenameForm} = getNav2();
             const {showAddDeviceModal} = getNav4();
@@ -176,17 +152,13 @@
             if (action === 'view') {
                 fetchAndShowDetail(id);
             } else if (action === 'rename') {
-                const currentAlias = btn.dataset.alias || '';
-                prefillRenameForm(id, currentAlias);
+                prefillRenameForm(id, btn.dataset.alias || '');
                 openModal('nav2-rename-root');
             } else if (action === 'add_to_book') {
                 showAddDeviceModal(id);
-            } else {
-                console.log('nav-2 row action:', action, id);
             }
         }, false);
 
-        // nav-2 详情/行内编辑（进入编辑态）
         contentEl.addEventListener('click', function (e) {
             const {startInlineEdit} = getNav2();
             const editBtn = e.target.closest('.nav2-edit-btn');
@@ -206,7 +178,6 @@
             startInlineEdit(container, field, peer);
         }, false);
 
-        // nav-2 内联编辑（确认）
         contentEl.addEventListener('click', function (e) {
             const {submitInlineEdit} = getNav2();
             const okBtn = e.target.closest('.nav2-edit-confirm');
@@ -219,7 +190,6 @@
             submitInlineEdit(container, field, peer);
         }, false);
 
-        // nav-2 内联编辑（取消）
         contentEl.addEventListener('click', function (e) {
             const {cancelInlineEdit} = getNav2();
             const cancelBtn = e.target.closest('.nav2-edit-cancel');
@@ -231,7 +201,6 @@
             cancelInlineEdit(container, field);
         }, false);
 
-        // nav-2 点击别名文本进入编辑
         contentEl.addEventListener('click', function (e) {
             const {startInlineEdit} = getNav2();
             const textEl = e.target.closest('[data-inline-field="alias"] .nav2-detail-text');
@@ -241,19 +210,17 @@
             if (container.querySelector('input[type="text"][data-field="alias"]')) return;
             const peer = container.getAttribute('data-peer') || '';
             if (!container.hasAttribute('data-original')) {
-                const text = (textEl.textContent || '').trim();
-                container.setAttribute('data-original', text);
+                container.setAttribute('data-original', (textEl.textContent || '').trim());
             }
             startInlineEdit(container, 'alias', peer);
         }, false);
 
-        // nav-2 重命名表单提交
+        // nav-2 重命名表单
         contentEl.addEventListener('submit', function (e) {
-            const {showToast, parseFetchError, getCookie} = getUtils();
-            const {renderContent} = getNavigation();
+            const {showToast, postForm} = getUtils();
             const {close: closeModal} = getModal();
             const {collectQueryOptions} = getNav2();
-            const {STORAGE_KEY, URLS} = getConstants();
+            const {URLS} = getConstants();
             const formEl = e.target;
             if (!formEl || formEl.id !== 'nav2-rename-form') return;
             e.preventDefault();
@@ -264,58 +231,26 @@
                 showToast('请输入有效的别名', 'error');
                 return;
             }
-            const csrf = getCookie('csrftoken');
-            const body = new URLSearchParams();
-            body.set('peer_id', peerId);
-            body.set('alias', alias);
-            fetch(URLS.RENAME_ALIAS, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                    'X-CSRFToken': csrf
-                },
-                body: body.toString()
-            }).then(resp => {
-                if (!resp.ok) return parseFetchError(resp);
-                return resp.json();
-            }).then(data => {
-                if (!data || data.ok !== true) {
-                    throw new Error((data && (data.err_msg || data.error)) ? (data.err_msg || data.error) : '重命名失败');
-                }
+            postForm(URLS.RENAME_ALIAS, {peer_id: peerId, alias: alias}).then(() => {
                 closeModal('nav2-rename-root');
                 const extra = collectQueryOptions(document.getElementById('nav2-search-form'));
-                renderContent('nav-2', extra);
-                try {
-                    localStorage.setItem(STORAGE_KEY, 'nav-2');
-                } catch (e) {
-                }
+                reloadNav('nav-2', extra);
             }).catch(err => {
                 showToast(err.message || '重命名失败，请稍后重试', 'error');
             });
         }, false);
 
-        // nav-2 搜索表单提交
+        // nav-2 搜索表单
         contentEl.addEventListener('submit', function (e) {
-            const {renderContent} = getNavigation();
-            const {collectQueryOptions} = getNav2();
-            const {STORAGE_KEY} = getConstants();
             const formEl = e.target;
             if (!formEl || formEl.id !== 'nav2-search-form') return;
             e.preventDefault();
-            const key = 'nav-2';
-            const extra = collectQueryOptions(formEl);
-            renderContent(key, extra);
-            try {
-                localStorage.setItem(STORAGE_KEY, key);
-            } catch (e) {
-            }
+            const {collectQueryOptions} = getNav2();
+            reloadNav('nav-2', collectQueryOptions(formEl));
         }, false);
 
         // ========== nav-3 事件 ==========
 
-        // nav-3 分页
         contentEl.addEventListener('click', function (e) {
             const btn = e.target.closest('.nav3-page-btn');
             if (!btn) return;
@@ -323,48 +258,33 @@
             const page = btn.dataset.page;
             const key = btn.dataset.key || 'nav-3';
             if (page) {
-                const formEl = document.getElementById('nav3-search-form');
                 const {collectQueryOptions} = getNav3();
-                const extra = collectQueryOptions(formEl);
+                const extra = collectQueryOptions(document.getElementById('nav3-search-form'));
                 extra.page = page;
-                renderContent(key, extra);
-                try {
-                    localStorage.setItem(STORAGE_KEY, key);
-                } catch (e) {
-                }
+                reloadNav(key, extra);
             }
         }, false);
 
-        // nav-3 重置
         contentEl.addEventListener('click', function (e) {
             const btn = e.target.closest('.nav3-reset-btn');
             if (!btn) return;
             e.preventDefault();
-            const key = 'nav-3';
-            renderContent(key);
-            try {
-                localStorage.setItem(STORAGE_KEY, key);
-            } catch (e) {
-            }
+            reloadNav('nav-3');
         }, false);
 
-        // nav-3 搜索表单提交
         contentEl.addEventListener('submit', function (e) {
             const formEl = e.target;
             if (!formEl || formEl.id !== 'nav3-search-form') return;
             e.preventDefault();
-            const key = 'nav-3';
             const {collectQueryOptions} = getNav3();
-            const extra = collectQueryOptions(formEl);
-            renderContent(key, extra);
-            try {
-                localStorage.setItem(STORAGE_KEY, key);
-            } catch (e) {
-            }
+            reloadNav('nav-3', collectQueryOptions(formEl));
         }, false);
 
         // nav-3 行级操作
         contentEl.addEventListener('click', function (e) {
+            const {showToast, postForm} = getUtils();
+            const {open: openModal} = getModal();
+            const {URLS} = getConstants();
             const btn = e.target.closest('.nav3-row-action');
             if (!btn) return;
             e.preventDefault();
@@ -372,18 +292,15 @@
             const username = btn.getAttribute('data-username') || '';
             if (!action || !username) return;
             if (action === 'edit') {
-                const fullname = btn.getAttribute('data-fullname') || '';
-                const email = btn.getAttribute('data-email') || '';
-                const isStaff = btn.getAttribute('data-is_staff') === '1';
                 const uEl = document.getElementById('nav3-edit-username');
                 const fEl = document.getElementById('nav3-edit-fullname');
                 const eEl = document.getElementById('nav3-edit-email');
                 const sEl = document.getElementById('nav3-edit-is-staff');
                 if (uEl) uEl.value = username;
-                if (fEl) fEl.value = fullname;
-                if (eEl) eEl.value = email;
+                if (fEl) fEl.value = btn.getAttribute('data-fullname') || '';
+                if (eEl) eEl.value = btn.getAttribute('data-email') || '';
                 if (sEl) {
-                    sEl.checked = isStaff;
+                    sEl.checked = btn.getAttribute('data-is_staff') === '1';
                     sEl.disabled = (username === document.body.dataset.currentUser);
                 }
                 openModal('nav3-edit-root');
@@ -397,86 +314,49 @@
                 openModal('nav3-reset-root');
             } else if (action === 'delete') {
                 if (!confirm(`确定要删除用户"${username}"吗？删除后该用户将无法登录。`)) return;
-                const csrf = getCookie('csrftoken');
-                const body = new URLSearchParams();
-                body.set('username', username);
-                fetch(URLS.USER_DELETE, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                        'X-CSRFToken': csrf
-                    },
-                    body: body.toString()
-                }).then(resp => {
-                    if (!resp.ok) return parseFetchError(resp);
-                    return resp.json();
-                }).then(data => {
-                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '删除失败');
+                postForm(URLS.USER_DELETE, {username: username}).then(() => {
                     showToast('删除成功', 'success');
                     const {collectQueryOptions} = getNav3();
-                    const extra = collectQueryOptions(document.getElementById('nav3-search-form'));
-                    renderContent('nav-3', extra);
-                    try {
-                        localStorage.setItem(STORAGE_KEY, 'nav-3');
-                    } catch (e) {
-                    }
+                    reloadNav('nav-3', collectQueryOptions(document.getElementById('nav3-search-form')));
                 }).catch(err => {
                     showToast(err.message || '删除失败，请稍后重试', 'error');
                 });
             }
         }, false);
 
-        // nav-3 编辑表单提交
+        // nav-3 编辑表单
         contentEl.addEventListener('submit', function (e) {
+            const {showToast, postForm} = getUtils();
+            const {close: closeModal} = getModal();
+            const {URLS} = getConstants();
             const formEl = e.target;
             if (!formEl || formEl.id !== 'nav3-edit-form') return;
             e.preventDefault();
             const fd = new FormData(formEl);
             const username = (fd.get('username') || '').trim();
-            const fullName = (fd.get('full_name') || '').trim();
-            const email = (fd.get('email') || '').trim();
-            const isStaff = formEl.querySelector('#nav3-edit-is-staff')?.checked ? '1' : '0';
             if (!username) {
                 showToast('用户名无效', 'error');
                 return;
             }
-            const csrf = getCookie('csrftoken');
-            const body = new URLSearchParams();
-            body.set('username', username);
-            body.set('full_name', fullName);
-            body.set('email', email);
-            body.set('is_staff', isStaff);
-            fetch(URLS.USER_UPDATE, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                    'X-CSRFToken': csrf
-                },
-                body: body.toString()
-            }).then(resp => {
-                if (!resp.ok) return parseFetchError(resp);
-                return resp.json();
-            }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '保存失败');
+            postForm(URLS.USER_UPDATE, {
+                username: username,
+                full_name: (fd.get('full_name') || '').trim(),
+                email: (fd.get('email') || '').trim(),
+                is_staff: formEl.querySelector('#nav3-edit-is-staff')?.checked ? '1' : '0'
+            }).then(() => {
                 closeModal('nav3-edit-root');
                 const {collectQueryOptions} = getNav3();
-                const extra = collectQueryOptions(document.getElementById('nav3-search-form'));
-                renderContent('nav-3', extra);
-                try {
-                    localStorage.setItem(STORAGE_KEY, 'nav-3');
-                } catch (e) {
-                }
+                reloadNav('nav-3', collectQueryOptions(document.getElementById('nav3-search-form')));
             }).catch(err => {
                 showToast(err.message || '保存失败，请稍后重试', 'error');
             });
         }, false);
 
-        // nav-3 重置密码表单提交
+        // nav-3 重置密码表单
         contentEl.addEventListener('submit', function (e) {
+            const {showToast, postForm} = getUtils();
+            const {close: closeModal} = getModal();
+            const {URLS} = getConstants();
             const formEl = e.target;
             if (!formEl || formEl.id !== 'nav3-reset-form') return;
             e.preventDefault();
@@ -492,33 +372,10 @@
                 showToast('两次密码不一致', 'error');
                 return;
             }
-            const csrf = getCookie('csrftoken');
-            const body = new URLSearchParams();
-            body.set('username', username);
-            body.set('password1', p1);
-            body.set('password2', p2);
-            fetch(URLS.USER_RESET_PWD, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                    'X-CSRFToken': csrf
-                },
-                body: body.toString()
-            }).then(resp => {
-                if (!resp.ok) return parseFetchError(resp);
-                return resp.json();
-            }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '重置失败');
+            postForm(URLS.USER_RESET_PWD, {username, password1: p1, password2: p2}).then(() => {
                 closeModal('nav3-reset-root');
                 const {collectQueryOptions} = getNav3();
-                const extra = collectQueryOptions(document.getElementById('nav3-search-form'));
-                renderContent('nav-3', extra);
-                try {
-                    localStorage.setItem(STORAGE_KEY, 'nav-3');
-                } catch (e) {
-                }
+                reloadNav('nav-3', collectQueryOptions(document.getElementById('nav3-search-form')));
             }).catch(err => {
                 showToast(err.message || '重置失败，请稍后重试', 'error');
             });
@@ -526,6 +383,7 @@
 
         // nav-3 新建用户按钮
         contentEl.addEventListener('click', function (e) {
+            const {open: openModal} = getModal();
             const btn = e.target.closest('.nav3-create-btn');
             if (!btn) return;
             e.preventDefault();
@@ -534,18 +392,18 @@
             openModal('nav3-create-root');
         }, false);
 
-        // nav-3 新建用户表单提交
+        // nav-3 新建用户表单
         contentEl.addEventListener('submit', function (e) {
+            const {showToast, postForm} = getUtils();
+            const {close: closeModal} = getModal();
+            const {URLS} = getConstants();
             const formEl = e.target;
             if (!formEl || formEl.id !== 'nav3-create-form') return;
             e.preventDefault();
             const fd = new FormData(formEl);
             const username = (fd.get('username') || '').trim();
-            const fullName = (fd.get('full_name') || '').trim();
-            const email = (fd.get('email') || '').trim();
             const p1 = (fd.get('password1') || '').trim();
             const p2 = (fd.get('password2') || '').trim();
-            const isStaff = formEl.querySelector('#nav3-create-is-staff')?.checked ? '1' : '0';
             if (!username || !p1 || !p2) {
                 showToast('用户名和密码不能为空', 'error');
                 return;
@@ -558,37 +416,21 @@
                 showToast('密码长度至少为6位', 'error');
                 return;
             }
-            const csrf = getCookie('csrftoken');
-            const body = new URLSearchParams();
-            body.set('username', username);
-            body.set('password1', p1);
-            body.set('password2', p2);
-            if (fullName) body.set('full_name', fullName);
-            if (email) body.set('email', email);
-            body.set('is_staff', isStaff);
-            fetch(URLS.USER_CREATE, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                    'X-CSRFToken': csrf
-                },
-                body: body.toString()
-            }).then(resp => {
-                if (!resp.ok) return parseFetchError(resp);
-                return resp.json();
-            }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '创建失败');
+            const params = {
+                username,
+                password1: p1,
+                password2: p2,
+                is_staff: formEl.querySelector('#nav3-create-is-staff')?.checked ? '1' : '0'
+            };
+            const fullName = (fd.get('full_name') || '').trim();
+            const email = (fd.get('email') || '').trim();
+            if (fullName) params.full_name = fullName;
+            if (email) params.email = email;
+            postForm(URLS.USER_CREATE, params).then(() => {
                 showToast('用户创建成功', 'success');
                 closeModal('nav3-create-root');
                 const {collectQueryOptions} = getNav3();
-                const extra = collectQueryOptions(document.getElementById('nav3-search-form'));
-                renderContent('nav-3', extra);
-                try {
-                    localStorage.setItem(STORAGE_KEY, 'nav-3');
-                } catch (e) {
-                }
+                reloadNav('nav-3', collectQueryOptions(document.getElementById('nav3-search-form')));
             }).catch(err => {
                 showToast(err.message || '创建失败，请稍后重试', 'error');
             });
@@ -596,7 +438,6 @@
 
         // ========== nav-4 事件 ==========
 
-        // nav-4 分页
         contentEl.addEventListener('click', function (e) {
             const btn = e.target.closest('.nav4-page-btn');
             if (!btn) return;
@@ -604,48 +445,31 @@
             const page = btn.dataset.page;
             const key = btn.dataset.key || 'nav-4';
             if (page) {
-                const formEl = document.getElementById('nav4-search-form');
                 const {collectQueryOptions} = getNav4();
-                const extra = collectQueryOptions(formEl);
+                const extra = collectQueryOptions(document.getElementById('nav4-search-form'));
                 extra.page = page;
-                renderContent(key, extra);
-                try {
-                    localStorage.setItem(STORAGE_KEY, key);
-                } catch (e) {
-                }
+                reloadNav(key, extra);
             }
         }, false);
 
-        // nav-4 重置
         contentEl.addEventListener('click', function (e) {
             const btn = e.target.closest('.nav4-reset-btn');
             if (!btn) return;
             e.preventDefault();
-            const key = 'nav-4';
-            renderContent(key);
-            try {
-                localStorage.setItem(STORAGE_KEY, key);
-            } catch (e) {
-            }
+            reloadNav('nav-4');
         }, false);
 
-        // nav-4 搜索表单提交
         contentEl.addEventListener('submit', function (e) {
             const formEl = e.target;
             if (!formEl || formEl.id !== 'nav4-search-form') return;
             e.preventDefault();
-            const key = 'nav-4';
             const {collectQueryOptions} = getNav4();
-            const extra = collectQueryOptions(formEl);
-            renderContent(key, extra);
-            try {
-                localStorage.setItem(STORAGE_KEY, key);
-            } catch (e) {
-            }
+            reloadNav('nav-4', collectQueryOptions(formEl));
         }, false);
 
         // nav-4 新建地址簿按钮
         contentEl.addEventListener('click', function (e) {
+            const {open: openModal} = getModal();
             const btn = e.target.closest('.nav4-create-btn');
             if (!btn) return;
             e.preventDefault();
@@ -656,8 +480,11 @@
             openModal('nav4-create-root');
         }, false);
 
-        // nav-4 新建地址簿表单提交
+        // nav-4 新建地址簿表单
         contentEl.addEventListener('submit', function (e) {
+            const {showToast, postForm} = getUtils();
+            const {close: closeModal} = getModal();
+            const {URLS} = getConstants();
             const formEl = e.target;
             if (!formEl || formEl.id !== 'nav4-create-form') return;
             e.preventDefault();
@@ -668,33 +495,11 @@
                 showToast('请输入地址簿名称', 'error');
                 return;
             }
-            const csrf = getCookie('csrftoken');
-            const body = new URLSearchParams();
-            body.set('personal_name', personalName);
-            body.set('personal_type', personalType);
-            fetch(URLS.PERSONAL_CREATE, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                    'X-CSRFToken': csrf
-                },
-                body: body.toString()
-            }).then(resp => {
-                if (!resp.ok) return parseFetchError(resp);
-                return resp.json();
-            }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '创建失败');
+            postForm(URLS.PERSONAL_CREATE, {personal_name: personalName, personal_type: personalType}).then(() => {
                 closeModal('nav4-create-root');
                 const {collectQueryOptions} = getNav4();
-                const extra = collectQueryOptions(document.getElementById('nav4-search-form'));
-                renderContent('nav-4', extra);
+                reloadNav('nav-4', collectQueryOptions(document.getElementById('nav4-search-form')));
                 showToast('创建成功', 'success');
-                try {
-                    localStorage.setItem(STORAGE_KEY, 'nav-4');
-                } catch (e) {
-                }
             }).catch(err => {
                 showToast(err.message || '创建失败，请稍后重试', 'error');
             });
@@ -702,6 +507,9 @@
 
         // nav-4 行级操作
         contentEl.addEventListener('click', function (e) {
+            const {showToast, postForm} = getUtils();
+            const {open: openModal} = getModal();
+            const {URLS} = getConstants();
             const btn = e.target.closest('.nav4-row-action');
             if (!btn) return;
             e.preventDefault();
@@ -711,12 +519,8 @@
             if (!action || !guid) return;
 
             if (action === 'view') {
-                const {
-                    collectQueryOptions: collectQueryOptions4,
-                    fetchAndShowDetail: fetchAndShowDetail4,
-                    startInlineEdit: startInlineEdit4
-                } = getNav4();
-                fetchAndShowDetail(guid);
+                const {fetchAndShowDetail: fetchAndShowDetail4} = getNav4();
+                fetchAndShowDetail4(guid);
             } else if (action === 'rename') {
                 const guidEl = document.getElementById('nav4-rename-guid');
                 const nameEl = document.getElementById('nav4-rename-name');
@@ -729,39 +533,21 @@
                 openModal('nav4-rename-root');
             } else if (action === 'delete') {
                 if (!confirm(`确定要删除地址簿"${name}"吗？删除后将无法恢复。`)) return;
-                const csrf = getCookie('csrftoken');
-                const body = new URLSearchParams();
-                body.set('guid', guid);
-                fetch(URLS.PERSONAL_DELETE, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                        'X-CSRFToken': csrf
-                    },
-                    body: body.toString()
-                }).then(resp => {
-                    if (!resp.ok) return parseFetchError(resp);
-                    return resp.json();
-                }).then(data => {
-                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '删除失败');
+                postForm(URLS.PERSONAL_DELETE, {guid}).then(() => {
                     const {collectQueryOptions} = getNav4();
-                    const extra = collectQueryOptions(document.getElementById('nav4-search-form'));
-                    renderContent('nav-4', extra);
+                    reloadNav('nav-4', collectQueryOptions(document.getElementById('nav4-search-form')));
                     showToast('删除成功', 'success');
-                    try {
-                        localStorage.setItem(STORAGE_KEY, 'nav-4');
-                    } catch (e) {
-                    }
                 }).catch(err => {
                     showToast(err.message || '删除失败，请稍后重试', 'error');
                 });
             }
         }, false);
 
-        // nav-4 重命名表单提交
+        // nav-4 重命名表单
         contentEl.addEventListener('submit', function (e) {
+            const {showToast, postForm} = getUtils();
+            const {close: closeModal} = getModal();
+            const {URLS} = getConstants();
             const formEl = e.target;
             if (!formEl || formEl.id !== 'nav4-rename-form') return;
             e.preventDefault();
@@ -772,33 +558,11 @@
                 showToast('请输入新名称', 'error');
                 return;
             }
-            const csrf = getCookie('csrftoken');
-            const body = new URLSearchParams();
-            body.set('guid', guid);
-            body.set('new_name', newName);
-            fetch(URLS.PERSONAL_RENAME, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                    'X-CSRFToken': csrf
-                },
-                body: body.toString()
-            }).then(resp => {
-                if (!resp.ok) return parseFetchError(resp);
-                return resp.json();
-            }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '重命名失败');
+            postForm(URLS.PERSONAL_RENAME, {guid, new_name: newName}).then(() => {
                 closeModal('nav4-rename-root');
                 const {collectQueryOptions} = getNav4();
-                const extra = collectQueryOptions(document.getElementById('nav4-search-form'));
-                renderContent('nav-4', extra);
+                reloadNav('nav-4', collectQueryOptions(document.getElementById('nav4-search-form')));
                 showToast('重命名成功', 'success');
-                try {
-                    localStorage.setItem(STORAGE_KEY, 'nav-4');
-                } catch (e) {
-                }
             }).catch(err => {
                 showToast(err.message || '重命名失败，请稍后重试', 'error');
             });
@@ -806,6 +570,8 @@
 
         // nav-4 从地址簿移除设备
         contentEl.addEventListener('click', function (e) {
+            const {showToast, postForm} = getUtils();
+            const {URLS} = getConstants();
             const btn = e.target.closest('.nav4-remove-device-btn');
             if (!btn) return;
             e.preventDefault();
@@ -813,30 +579,9 @@
             const peerId = btn.getAttribute('data-peer-id') || '';
             if (!guid || !peerId) return;
             if (!confirm('确定要从地址簿中移除该设备吗？')) return;
-            const csrf = getCookie('csrftoken');
-            const body = new URLSearchParams();
-            body.set('guid', guid);
-            body.set('peer_id', peerId);
-            fetch(URLS.PERSONAL_REMOVE_DEVICE, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                    'X-CSRFToken': csrf
-                },
-                body: body.toString()
-            }).then(resp => {
-                if (!resp.ok) return parseFetchError(resp);
-                return resp.json();
-            }).then(data => {
-                if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '移除失败');
-                const {
-                    collectQueryOptions: collectQueryOptions4,
-                    fetchAndShowDetail: fetchAndShowDetail4,
-                    startInlineEdit: startInlineEdit4
-                } = getNav4();
-                fetchAndShowDetail(guid);
+            postForm(URLS.PERSONAL_REMOVE_DEVICE, {guid, peer_id: peerId}).then(() => {
+                const {fetchAndShowDetail: fetchAndShowDetail4} = getNav4();
+                fetchAndShowDetail4(guid);
                 showToast('移除成功', 'success');
             }).catch(err => {
                 showToast(err.message || '移除失败，请稍后重试', 'error');
@@ -854,50 +599,28 @@
             const cell = btn.closest('.nav4-editable-cell');
             if (!cell || !field || !guid || !peerId) return;
             if (cell.querySelector('input[type="text"]')) return;
-            const {
-                collectQueryOptions: collectQueryOptions4,
-                fetchAndShowDetail: fetchAndShowDetail4,
-                startInlineEdit: startInlineEdit4
-            } = getNav4();
-            startInlineEdit(cell, field, guid, peerId);
+            const {startInlineEdit: startInlineEdit4} = getNav4();
+            startInlineEdit4(cell, field, guid, peerId);
         }, false);
 
-        // 添加设备到地址簿表单提交
+        // 添加设备到地址簿表单
         const addToBookForm = document.getElementById('nav2-add-to-book-form');
         if (addToBookForm) {
             addToBookForm.addEventListener('submit', function (e) {
+                const {showToast, postForm} = getUtils();
+                const {close: closeModal} = getModal();
+                const {URLS} = getConstants();
                 e.preventDefault();
                 const peerId = document.getElementById('nav2-add-to-book-peer-id').value.trim();
                 const guid = document.getElementById('nav2-add-to-book-guid').value.trim();
                 const alias = document.getElementById('nav2-add-to-book-alias').value.trim();
-
                 if (!guid) {
                     showToast('请选择地址簿', 'error');
                     return;
                 }
-
-                const csrf = getCookie('csrftoken');
-                const body = new URLSearchParams();
-                body.set('guid', guid);
-                body.set('peer_id', peerId);
-                if (alias) {
-                    body.set('alias', alias);
-                }
-
-                fetch(URLS.PERSONAL_ADD_DEVICE, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                        'X-CSRFToken': csrf
-                    },
-                    body: body.toString()
-                }).then(resp => {
-                    if (!resp.ok) return parseFetchError(resp);
-                    return resp.json();
-                }).then(data => {
-                    if (!data || data.ok !== true) throw new Error((data && (data.err_msg || data.error)) || '添加失败');
+                const params = {guid, peer_id: peerId};
+                if (alias) params.alias = alias;
+                postForm(URLS.PERSONAL_ADD_DEVICE, params).then(() => {
                     showToast('添加成功', 'success');
                     closeModal('nav2-add-to-book-root');
                 }).catch(err => {
@@ -908,41 +631,18 @@
 
         // ========== 导航内容加载完成事件 ==========
 
-        // 监听内容加载完成，根据导航项决定是否开启 nav-2 自动刷新
         document.addEventListener('contentLoaded', function (e) {
             const key = e.detail?.key || '';
-            const {
-                collectQueryOptions,
-                startInlineEdit,
-                submitInlineEdit,
-                cancelInlineEdit,
-                toggleAutoRefresh
-            } = getNav2();
+            const {toggleAutoRefresh} = getNav2();
             toggleAutoRefresh(key === 'nav-2');
         }, false);
 
-        // 页面可见性变化
-        document.addEventListener('visibilitychange', function () {
-            // 页面可见时，如果 nav-2 正在运行，则恢复轮询
-            if (!document.hidden) {
-                // 由 nav2 模块处理
-            }
-        }, false);
-
-        // 页面卸载前清理资源
         window.addEventListener('beforeunload', function () {
-            const {
-                collectQueryOptions,
-                startInlineEdit,
-                submitInlineEdit,
-                cancelInlineEdit,
-                toggleAutoRefresh
-            } = getNav2();
+            const {toggleAutoRefresh} = getNav2();
             toggleAutoRefresh(false);
         }, false);
     }
 
-    // 导出到全局
     APP.events = {
         init
     };

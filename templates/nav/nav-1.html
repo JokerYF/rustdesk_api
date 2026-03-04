@@ -41,12 +41,12 @@
         </tbody>
         </table>
     </div>
-    <div class="nav1-pagination" style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+    <div class="nav1-pagination">
         <button class="nav1-page-btn" data-key="nav-1"
                 {% if page_obj.has_previous %}data-page="{{ page_obj.previous_page_number }}"{% else %}data-page=""
                 disabled{% endif %}>上一页
         </button>
-        <span style="color:#6a737d;">第 {{ page_obj.number }} / {{ paginator.num_pages }} 页（共 {{ paginator.count }} 条）</span>
+        <span class="nav1-pagination-info">第 {{ page_obj.number }} / {{ paginator.num_pages }} 页（共 {{ paginator.count }} 条）</span>
         <button class="nav1-page-btn" data-key="nav-1"
                 {% if page_obj.has_next %}data-page="{{ page_obj.next_page_number }}"{% else %}data-page=""
                 disabled{% endif %}>下一页

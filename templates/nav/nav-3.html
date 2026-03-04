@@ -9,7 +9,9 @@
         <button type="submit" class="nav2-btn nav2-primary">搜索</button>
         <button type="button" class="nav2-btn nav3-reset-btn">重置</button>
     </form>
-    <button type="button" class="nav2-btn nav2-primary nav3-create-btn" style="margin-left: auto;">新建用户</button>
+    <div class="nav2-toolbar-actions">
+        <button type="button" class="nav2-btn nav2-primary nav3-create-btn">新建用户</button>
+    </div>
 </div>
 
 {% if users %}
@@ -83,7 +85,7 @@
                 {% if page_obj.has_previous %}data-page="{{ page_obj.previous_page_number }}"{% else %}data-page=""
                 disabled{% endif %}>上一页
         </button>
-        <span style="color:#6a737d;">第 {{ page_obj.number }} / {{ paginator.num_pages }} 页（共 {{ paginator.count }} 条）</span>
+        <span class="nav2-pagination-info">第 {{ page_obj.number }} / {{ paginator.num_pages }} 页（共 {{ paginator.count }} 条）</span>
         <button class="nav2-btn nav3-page-btn" data-key="nav-3"
                 {% if page_obj.has_next %}data-page="{{ page_obj.next_page_number }}"{% else %}data-page=""
                 disabled{% endif %}>下一页
@@ -93,126 +95,7 @@
     <div class="nav2-empty">暂无用户数据</div>
 {% endif %}
 
-<!-- 编辑用户弹框 -->
-<div id="nav3-edit-root" class="modal-backdrop" aria-hidden="true">
-    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="nav3-edit-title">
-        <div class="modal-header">
-            <h3 id="nav3-edit-title" class="modal-title">编辑用户</h3>
-            <button type="button" class="modal-close" data-close="nav3-edit" aria-label="关闭">
-                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
-            </button>
-        </div>
-        <div class="modal-body">
-            <form id="nav3-edit-form">
-                <div class="nav2-form-row">
-                    <label style="min-width:88px;color:#6a737d;">用户名</label>
-                    <input class="nav2-input nav2-input-full" type="text" name="username" id="nav3-edit-username"
-                           readonly>
-                </div>
-                <div class="nav2-form-row">
-                    <label style="min-width:88px;color:#6a737d;">姓名</label>
-                    <input class="nav2-input nav2-input-full" type="text" name="full_name" id="nav3-edit-fullname"
-                           placeholder="请输入姓名">
-                </div>
-                <div class="nav2-form-row">
-                    <label style="min-width:88px;color:#6a737d;">邮箱</label>
-                    <input class="nav2-input nav2-input-full" type="email" name="email" id="nav3-edit-email"
-                           placeholder="请输入邮箱">
-                </div>
-                <div class="nav2-form-row" style="align-items:center;">
-                    <label for="nav3-edit-is-staff" style="min-width:88px;color:#6a737d;">管理员</label>
-                    <input type="checkbox" id="nav3-edit-is-staff" name="is_staff" value="1">
-                </div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button type="button" class="nav2-btn" data-close="nav3-edit">取消</button>
-                    <button type="submit" class="nav2-btn nav2-primary">保存</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <!-- 点击遮罩关闭 -->
-</div>
-
-<!-- 重置密码弹框 -->
-<div id="nav3-reset-root" class="modal-backdrop" aria-hidden="true">
-    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="nav3-reset-title">
-        <div class="modal-header">
-            <h3 id="nav3-reset-title" class="modal-title">重置密码</h3>
-            <button type="button" class="modal-close" data-close="nav3-reset" aria-label="关闭">
-                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
-            </button>
-        </div>
-        <div class="modal-body">
-            <form id="nav3-reset-form">
-                <input type="hidden" name="username" id="nav3-reset-username">
-                <div class="nav2-form-row">
-                    <label for="nav3-reset-pass1" style="min-width:88px;color:#6a737d;">新密码</label>
-                    <input class="nav2-input nav2-input-full" type="password" name="password1" id="nav3-reset-pass1"
-                           placeholder="请输入新密码" required>
-                </div>
-                <div class="nav2-form-row">
-                    <label for="nav3-reset-pass2" style="min-width:88px;color:#6a737d;">确认密码</label>
-                    <input class="nav2-input nav2-input-full" type="password" name="password2" id="nav3-reset-pass2"
-                           placeholder="请再次输入新密码" required>
-                </div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button type="button" class="nav2-btn" data-close="nav3-reset">取消</button>
-                    <button type="submit" class="nav2-btn nav2-primary">确定</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-
-<!-- 新建用户弹框 -->
-<div id="nav3-create-root" class="modal-backdrop" aria-hidden="true">
-    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="nav3-create-title">
-        <div class="modal-header">
-            <h3 id="nav3-create-title" class="modal-title">新建用户</h3>
-            <button type="button" class="modal-close" data-close="nav3-create" aria-label="关闭">
-                <img src="/static/icons/close.svg" width="16" height="16" alt="" aria-hidden="true">
-            </button>
-        </div>
-        <div class="modal-body">
-            <form id="nav3-create-form">
-                <div class="nav2-form-row">
-                    <label for="nav3-create-username" style="min-width:88px;color:#6a737d;">用户名 *</label>
-                    <input class="nav2-input nav2-input-full" type="text" name="username" id="nav3-create-username"
-                           placeholder="请输入用户名" required>
-                </div>
-                <div class="nav2-form-row">
-                    <label for="nav3-create-fullname" style="min-width:88px;color:#6a737d;">姓名</label>
-                    <input class="nav2-input nav2-input-full" type="text" name="full_name" id="nav3-create-fullname"
-                           placeholder="请输入姓名">
-                </div>
-                <div class="nav2-form-row">
-                    <label for="nav3-create-email" style="min-width:88px;color:#6a737d;">邮箱</label>
-                    <input class="nav2-input nav2-input-full" type="email" name="email" id="nav3-create-email"
-                           placeholder="请输入邮箱">
-                </div>
-                <div class="nav2-form-row">
-                    <label for="nav3-create-pass1" style="min-width:88px;color:#6a737d;">密码 *</label>
-                    <input class="nav2-input nav2-input-full" type="password" name="password1" id="nav3-create-pass1"
-                           placeholder="请输入密码(至少6位)" required>
-                </div>
-                <div class="nav2-form-row">
-                    <label for="nav3-create-pass2" style="min-width:88px;color:#6a737d;">确认密码 *</label>
-                    <input class="nav2-input nav2-input-full" type="password" name="password2" id="nav3-create-pass2"
-                           placeholder="请再次输入密码" required>
-                </div>
-                <div class="nav2-form-row" style="align-items:center;">
-                    <label for="nav3-create-is-staff" style="min-width:88px;color:#6a737d;">管理员</label>
-                    <input type="checkbox" id="nav3-create-is-staff" name="is_staff" value="1">
-                </div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button type="button" class="nav2-btn" data-close="nav3-create">取消</button>
-                    <button type="submit" class="nav2-btn nav2-primary">创建</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-
+{% include "nav/modals/nav3-edit.html" %}
+{% include "nav/modals/nav3-reset.html" %}
+{% include "nav/modals/nav3-create.html" %}
 

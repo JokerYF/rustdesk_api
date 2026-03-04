@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -318,13 +320,13 @@ def update_device(request: HttpRequest) -> JsonResponse:
 
 
 @request_debug_log
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 @login_required(login_url='web_login')
 def device_statuses(request: HttpRequest) -> JsonResponse:
     """
     批量获取设备在线状态（仅查询，不修改会话）
 
-    :param request: Http 请求对象，GET 参数：
+    :param request: Http 请求对象，JSON body 参数：
         - ids: 逗号分隔的设备ID列表，如 "id1,id2,id3"
     :type request: HttpRequest
     :return: JSON 响应，形如 {"ok": true, "data": {"<peer_id>": {"is_online": true/false}}}
@@ -333,7 +335,11 @@ def device_statuses(request: HttpRequest) -> JsonResponse:
         - 前端应在请求头携带 ``X-Session-No-Renew: 1``，以避免该轮询请求"续命"会话
         - 仅执行只读查询，不做任何写操作
     """
-    raw_ids = (request.GET.get('ids') or '').strip()
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'ok': True, 'data': {}})
+    raw_ids = (body.get('ids') or '').strip()
     if not raw_ids:
         return JsonResponse({'ok': True, 'data': {}})
     peer_ids = [p.strip() for p in raw_ids.split(',') if p.strip()]

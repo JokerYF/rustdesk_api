@@ -34,16 +34,8 @@
      * :rtype: Object
      */
     function collectQueryOptions(formEl) {
-        const params = {};
-        if (!formEl) return params;
-        const formData = new FormData(formEl);
-        ['q', 'type', 'page_size'].forEach((k) => {
-            const v = formData.get(k);
-            if (v !== null && String(v).trim() !== '') {
-                params[k] = String(v).trim();
-            }
-        });
-        return params;
+        const {collectFormParams} = getUtils();
+        return collectFormParams(formEl, ['q', 'type', 'page_size']);
     }
 
     /**
@@ -55,6 +47,8 @@
      */
     function renderDetailHTML(detail) {
         const {ICONS} = getConstants();
+        const {escapeHTML} = getUtils();
+        const esc = escapeHTML;
         let devicesHtml = '';
         if (detail.devices && detail.devices.length > 0) {
             devicesHtml = '<table class="nav2-table" style="margin-top:16px;"><thead><tr>' +
@@ -64,24 +58,24 @@
                 const statusClass = d.is_online ? 'online' : 'offline';
                 const statusText = d.is_online ? '在线' : '离线';
                 const tags = Array.isArray(d.tags) ? d.tags.join(', ') : (d.tags || '');
-                devicesHtml += '<tr data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '">' +
-                    '<td>' + (d.peer_id || '-') + '</td>' +
-                    '<td class="nav4-editable-cell" data-field="alias" data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '" data-original="' + (d.alias || '') + '">' +
-                    '<span class="nav2-detail-text">' + (d.alias || '-') + '</span> ' +
-                    '<button type="button" class="nav2-link nav4-edit-btn" data-field="alias" data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '" aria-label="编辑别名">' +
+                devicesHtml += '<tr data-guid="' + esc(detail.guid) + '" data-peer-id="' + esc(d.peer_id) + '">' +
+                    '<td>' + esc(d.peer_id || '-') + '</td>' +
+                    '<td class="nav4-editable-cell" data-field="alias" data-guid="' + esc(detail.guid) + '" data-peer-id="' + esc(d.peer_id) + '" data-original="' + esc(d.alias || '') + '">' +
+                    '<span class="nav2-detail-text">' + esc(d.alias || '-') + '</span> ' +
+                    '<button type="button" class="nav2-link nav4-edit-btn" data-field="alias" data-guid="' + esc(detail.guid) + '" data-peer-id="' + esc(d.peer_id) + '" aria-label="编辑别名">' +
                     '<img src="' + ICONS.EDIT + '" width="16" height="16" alt="" aria-hidden="true">' +
                     '</button>' +
                     '</td>' +
-                    '<td class="nav4-editable-cell" data-field="tags" data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '" data-original="' + (tags || '') + '">' +
-                    '<span class="nav2-detail-text">' + (tags || '-') + '</span> ' +
-                    '<button type="button" class="nav2-link nav4-edit-btn" data-field="tags" data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '" aria-label="编辑标签">' +
+                    '<td class="nav4-editable-cell" data-field="tags" data-guid="' + esc(detail.guid) + '" data-peer-id="' + esc(d.peer_id) + '" data-original="' + esc(tags || '') + '">' +
+                    '<span class="nav2-detail-text">' + esc(tags || '-') + '</span> ' +
+                    '<button type="button" class="nav2-link nav4-edit-btn" data-field="tags" data-guid="' + esc(detail.guid) + '" data-peer-id="' + esc(d.peer_id) + '" aria-label="编辑标签">' +
                     '<img src="' + ICONS.EDIT + '" width="16" height="16" alt="" aria-hidden="true">' +
                     '</button>' +
                     '</td>' +
-                    '<td>' + (d.device_name || '-') + '</td>' +
-                    '<td>' + (d.os || '-') + '</td>' +
+                    '<td>' + esc(d.device_name || '-') + '</td>' +
+                    '<td>' + esc(d.os || '-') + '</td>' +
                     '<td><span class="nav2-status ' + statusClass + '">' + statusText + '</span></td>' +
-                    '<td><button type="button" class="nav2-link nav4-remove-device-btn" data-guid="' + detail.guid + '" data-peer-id="' + d.peer_id + '">移除</button></td>' +
+                    '<td><button type="button" class="nav2-link nav4-remove-device-btn" data-guid="' + esc(detail.guid) + '" data-peer-id="' + esc(d.peer_id) + '">移除</button></td>' +
                     '</tr>';
             });
             devicesHtml += '</tbody></table>';
@@ -93,10 +87,10 @@
         const displayName = detail.display_name || detail.personal_name || '-';
         return (
             '<dl style="margin:0;">' +
-            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">地址簿名称</dt><dd style="margin:0;">' + displayName + '</dd></div>' +
-            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">类型</dt><dd style="margin:0;">' + typeText + '</dd></div>' +
-            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">设备数量</dt><dd style="margin:0;">' + (detail.device_count || 0) + '</dd></div>' +
-            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">创建时间</dt><dd style="margin:0;">' + (detail.created_at || '-') + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">地址簿名称</dt><dd style="margin:0;">' + esc(displayName) + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">类型</dt><dd style="margin:0;">' + esc(typeText) + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">设备数量</dt><dd style="margin:0;">' + esc(detail.device_count || 0) + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;"><dt style="min-width:88px;color:#6a737d;">创建时间</dt><dd style="margin:0;">' + esc(detail.created_at || '-') + '</dd></div>' +
             '</dl>' +
             devicesHtml
         );
@@ -128,7 +122,8 @@
             const html = renderDetailHTML(data.data || {});
             if (bodyEl) bodyEl.innerHTML = html;
         }).catch(err => {
-            if (bodyEl) bodyEl.innerHTML = '<div style="color:#b91c1c;">' + (err.message || '加载失败') + '</div>';
+            const {escapeHTML} = getUtils();
+            if (bodyEl) bodyEl.innerHTML = '<div style="color:#b91c1c;">' + escapeHTML(err.message || '加载失败') + '</div>';
         });
     }
 

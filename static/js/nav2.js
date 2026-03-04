@@ -83,19 +83,22 @@
         const {URLS} = getConstants();
         const ids = collectPeerIdsFromDOM();
         if (!ids.length) return Promise.resolve();
-        const params = new URLSearchParams({ids: ids.join(',')});
         try {
             if (INFLIGHT_CONTROLLER) INFLIGHT_CONTROLLER.abort();
         } catch (e) {
+            console.warn('refreshStatusesOnce: abort失败', e);
         }
         INFLIGHT_CONTROLLER = new AbortController();
-        return fetch(`${URLS.DEVICE_STATUSES}?${params.toString()}`, {
-            method: 'GET',
+        return fetch(URLS.DEVICE_STATUSES, {
+            method: 'POST',
             credentials: 'same-origin',
             headers: {
+                'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-Session-No-Renew': '1'
+                'X-Session-No-Renew': '1',
+                'X-CSRFToken': APP.utils.getCookie('csrftoken')
             },
+            body: JSON.stringify({ids: ids.join(',')}),
             signal: INFLIGHT_CONTROLLER.signal
         }).then(resp => {
             if (!resp.ok) throw new Error('请求失败');
@@ -160,6 +163,7 @@
         try {
             if (INFLIGHT_CONTROLLER) INFLIGHT_CONTROLLER.abort();
         } catch (e) {
+            console.warn('toggleAutoRefresh: abort失败', e);
         }
         INFLIGHT_CONTROLLER = null;
         FAILURES = 0;
@@ -176,16 +180,8 @@
      * :rtype: Object
      */
     function collectQueryOptions(formEl) {
-        const params = {};
-        if (!formEl) return params;
-        const formData = new FormData(formEl);
-        ['q', 'os', 'status', 'page_size'].forEach((k) => {
-            const v = formData.get(k);
-            if (v !== null && String(v).trim() !== '') {
-                params[k] = String(v).trim();
-            }
-        });
-        return params;
+        const {collectFormParams} = getUtils();
+        return collectFormParams(formEl, ['q', 'os', 'status', 'page_size']);
     }
 
     /**
@@ -216,29 +212,31 @@
      */
     function renderDetailHTML(detail) {
         const {ICONS} = getConstants();
+        const {escapeHTML} = getUtils();
         const tags = Array.isArray(detail.tags) ? detail.tags.join(', ') : (detail.tags || '');
+        const esc = escapeHTML;
         return (
             '<dl style="margin:0;">' +
-            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">设备ID</dt><dd style="margin:0;flex:1;">' + (detail.peer_id || '-') + '</dd></div>' +
-            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">用户名</dt><dd style="margin:0;flex:1;">' + (detail.username || '-') + '</dd></div>' +
-            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">主机名</dt><dd style="margin:0;flex:1;">' + (detail.hostname || '-') + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">设备ID</dt><dd style="margin:0;flex:1;">' + esc(detail.peer_id || '-') + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">用户名</dt><dd style="margin:0;flex:1;">' + esc(detail.username || '-') + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">主机名</dt><dd style="margin:0;flex:1;">' + esc(detail.hostname || '-') + '</dd></div>' +
             '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">设备别名</dt>' +
-            '<dd id="nav2-detail-alias" style="margin:0;flex:1;" data-original="' + (detail.alias || '') + '">' +
-            '<span class="nav2-detail-text">' + (detail.alias || '-') + '</span> ' +
-            '<button type="button" class="nav2-link nav2-edit-btn" data-field="alias" data-peer="' + (detail.peer_id || '') + '" aria-label="编辑别名">' +
+            '<dd id="nav2-detail-alias" style="margin:0;flex:1;" data-original="' + esc(detail.alias || '') + '">' +
+            '<span class="nav2-detail-text">' + esc(detail.alias || '-') + '</span> ' +
+            '<button type="button" class="nav2-link nav2-edit-btn" data-field="alias" data-peer="' + esc(detail.peer_id || '') + '" aria-label="编辑别名">' +
             '<img src="' + ICONS.EDIT + '" width="16" height="16" alt="" aria-hidden="true">' +
             '</button>' +
             '</dd>' +
             '</div>' +
             '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">设备标签</dt>' +
-            '<dd id="nav2-detail-tags" style="margin:0;flex:1;" data-original="' + (tags || '') + '">' +
-            '<span class="nav2-detail-text">' + (tags || '-') + '</span> ' +
-            '<button type="button" class="nav2-link nav2-edit-btn" data-field="tags" data-peer="' + (detail.peer_id || '') + '" aria-label="编辑标签">' +
+            '<dd id="nav2-detail-tags" style="margin:0;flex:1;" data-original="' + esc(tags || '') + '">' +
+            '<span class="nav2-detail-text">' + esc(tags || '-') + '</span> ' +
+            '<button type="button" class="nav2-link nav2-edit-btn" data-field="tags" data-peer="' + esc(detail.peer_id || '') + '" aria-label="编辑标签">' +
             '<img src="' + ICONS.EDIT + '" width="16" height="16" alt="" aria-hidden="true">' +
             '</button>' +
             '</dd>' +
             '</div>' +
-            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">平台</dt><dd style="margin:0;flex:1;">' + (detail.platform || '-') + '</dd></div>' +
+            '<div style="display:flex;gap:8px;margin:6px 0;align-items:center;"><dt style="min-width:88px;color:#6a737d;">平台</dt><dd style="margin:0;flex:1;">' + esc(detail.platform || '-') + '</dd></div>' +
             '</dl>'
         );
     }
@@ -269,7 +267,8 @@
             const html = renderDetailHTML(data.data || {});
             if (bodyEl) bodyEl.innerHTML = html;
         }).catch(err => {
-            if (bodyEl) bodyEl.innerHTML = '<div style="color:#b91c1c;">' + (err.message || '加载失败') + '</div>';
+            const {escapeHTML} = getUtils();
+            if (bodyEl) bodyEl.innerHTML = '<div style="color:#b91c1c;">' + escapeHTML(err.message || '加载失败') + '</div>';
         });
     }
 
@@ -284,6 +283,8 @@
      */
     function startInlineEdit(containerEl, field, peerId) {
         const {ICONS} = getConstants();
+        const {escapeHTML} = getUtils();
+        const esc = escapeHTML;
         const placeholder = field === 'alias' ? '请输入设备别名' : '用逗号分隔多个标签';
         const isInlineCell = containerEl.hasAttribute('data-inline-field');
         const original = containerEl.getAttribute('data-original')
@@ -296,12 +297,12 @@
             const pop = document.createElement('div');
             pop.className = 'nav2-inline-pop';
             pop.innerHTML =
-                '<input type="text" class="nav2-input" value="' + value + '" ' +
-                'data-field="' + field + '" data-peer="' + peerId + '" placeholder="' + placeholder + '" /> ' +
-                '<button type="button" class="nav2-link nav2-edit-confirm" data-field="' + field + '" data-peer="' + peerId + '" aria-label="确认">' +
+                '<input type="text" class="nav2-input" value="' + esc(value) + '" ' +
+                'data-field="' + esc(field) + '" data-peer="' + esc(peerId) + '" placeholder="' + esc(placeholder) + '" /> ' +
+                '<button type="button" class="nav2-link nav2-edit-confirm" data-field="' + esc(field) + '" data-peer="' + esc(peerId) + '" aria-label="确认">' +
                 '<img src="' + ICONS.CONFIRM + '" width="16" height="16" alt="" aria-hidden="true">' +
                 '</button> ' +
-                '<button type="button" class="nav2-link nav2-edit-cancel" data-field="' + field + '" data-peer="' + peerId + '" aria-label="取消">' +
+                '<button type="button" class="nav2-link nav2-edit-cancel" data-field="' + esc(field) + '" data-peer="' + esc(peerId) + '" aria-label="取消">' +
                 '<img src="' + ICONS.CANCEL + '" width="16" height="16" alt="" aria-hidden="true">' +
                 '</button>';
             containerEl.appendChild(pop);
@@ -314,12 +315,12 @@
         }
 
         containerEl.innerHTML =
-            '<input type="text" class="nav2-input" style="min-width:200px;" value="' + value + '" ' +
-            'data-field="' + field + '" data-peer="' + peerId + '" placeholder="' + placeholder + '" /> ' +
-            '<button type="button" class="nav2-link nav2-edit-confirm" data-field="' + field + '" data-peer="' + peerId + '" aria-label="确认">' +
+            '<input type="text" class="nav2-input" style="min-width:200px;" value="' + esc(value) + '" ' +
+            'data-field="' + esc(field) + '" data-peer="' + esc(peerId) + '" placeholder="' + esc(placeholder) + '" /> ' +
+            '<button type="button" class="nav2-link nav2-edit-confirm" data-field="' + esc(field) + '" data-peer="' + esc(peerId) + '" aria-label="确认">' +
             '<img src="' + ICONS.CONFIRM + '" width="16" height="16" alt="" aria-hidden="true">' +
             '</button> ' +
-            '<button type="button" class="nav2-link nav2-edit-cancel" data-field="' + field + '" data-peer="' + peerId + '" aria-label="取消">' +
+            '<button type="button" class="nav2-link nav2-edit-cancel" data-field="' + esc(field) + '" data-peer="' + esc(peerId) + '" aria-label="取消">' +
             '<img src="' + ICONS.CANCEL + '" width="16" height="16" alt="" aria-hidden="true">' +
             '</button>';
     }
@@ -386,6 +387,8 @@
      */
     function cancelInlineEdit(containerEl, field) {
         const {ICONS} = getConstants();
+        const {escapeHTML} = getUtils();
+        const esc = escapeHTML;
         const pop = containerEl.querySelector('.nav2-inline-pop');
         if (pop) {
             pop.remove();
@@ -394,8 +397,8 @@
         const original = containerEl.getAttribute('data-original') || '';
         const peerAttr = containerEl.getAttribute('data-peer') || '';
         containerEl.innerHTML =
-            '<span class="nav2-detail-text">' + (original || '-') + '</span> ' +
-            '<button type="button" class="nav2-link nav2-edit-btn" data-field="' + field + '" data-peer="' + peerAttr + '" aria-label="编辑">' +
+            '<span class="nav2-detail-text">' + esc(original || '-') + '</span> ' +
+            '<button type="button" class="nav2-link nav2-edit-btn" data-field="' + esc(field) + '" data-peer="' + esc(peerAttr) + '" aria-label="编辑">' +
             '<img src="' + ICONS.EDIT + '" width="16" height="16" alt="" aria-hidden="true">' +
             '</button>';
     }

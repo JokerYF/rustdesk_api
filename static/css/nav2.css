@@ -1,7 +1,7 @@
 .nav2-section-title {
     font-size: 16px;
     font-weight: 600;
-    color: #0b3d60;
+    color: var(--color-brand);
     margin: 8px 0 10px 0;
 }
 
@@ -24,10 +24,10 @@
 .nav2-input,
 .nav2-select {
     appearance: none;
-    border: 1px solid #eaeef2;
-    background: #ffffff;
-    color: #1f2328;
-    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    border-radius: var(--radius-btn);
     padding: 6px 10px;
     font-size: 14px;
     line-height: 1.2;
@@ -35,15 +35,15 @@
 }
 
 .nav2-input::placeholder {
-    color: #8a939e;
+    color: var(--color-text-hint);
 }
 
 .nav2-btn {
     appearance: none;
-    border: 1px solid #eaeef2;
-    background: #ffffff;
-    color: #0b3d60;
-    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-brand);
+    border-radius: var(--radius-btn);
     padding: 6px 12px;
     font-size: 14px;
     line-height: 1.2;
@@ -52,37 +52,37 @@
 }
 
 .nav2-btn:hover:not(:disabled):not(.nav2-primary) {
-    background: #eef2f6;
-    border-color: #d0d7de;
+    background: var(--color-hover-bg);
+    border-color: var(--color-border-hover);
 }
 
 .nav2-btn:disabled {
-    background: #f7f8fa;
-    color: #8a939e;
+    background: var(--color-sidebar-bg);
+    color: var(--color-text-hint);
     cursor: not-allowed;
-    border-color: #eaeef2;
+    border-color: var(--color-border);
 }
 
 .nav2-btn:focus-visible {
     outline: none;
-    border-color: #1f6feb;
-    box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
+    border-color: var(--color-link);
+    box-shadow: var(--shadow-focus);
 }
 
 .nav2-primary {
-    background: #1f6feb;
+    background: var(--color-link);
     color: #ffffff;
-    border-color: #1f6feb;
+    border-color: var(--color-link);
 }
 
 .nav2-primary:hover {
-    background: #265ecf;
-    border-color: #265ecf;
-    color: #ffffff; /* 保持主按钮 hover 文本可读性 */
+    background: var(--color-link-hover);
+    border-color: var(--color-link-hover);
+    color: #ffffff;
 }
 
 .nav2-danger {
-    color: #b91c1c;
+    color: var(--color-danger);
 }
 
 .nav2-toolbar-actions {
@@ -90,17 +90,18 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    margin-left: auto;
 }
 
 .nav2-table {
     width: 100%;
-    max-width: 1400px; /* 限制最大宽度，避免过于松散 */
+    max-width: 1400px;
     border-collapse: separate;
     border-spacing: 0;
-    border: 1px solid #eaeef2;
-    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
     overflow: hidden;
-    background: #ffffff;
+    background: var(--color-bg);
 }
 
 .nav2-table th,
@@ -108,13 +109,13 @@
     text-align: left;
     padding: 10px 12px;
     font-size: 14px;
-    border-bottom: 1px solid #eaeef2;
+    border-bottom: 1px solid var(--color-border);
     vertical-align: middle;
 }
 
 .nav2-table thead th {
-    background: #f7f8fa;
-    color: #6a737d;
+    background: var(--color-sidebar-bg);
+    color: var(--color-text-secondary);
     font-weight: 600;
 }
 
@@ -122,7 +123,8 @@
     background: #f9fbff;
 }
 
-.nav2-row-actions {
+.nav2-row-actions,
+.table-row-actions {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
@@ -131,7 +133,7 @@
 .nav2-link {
     background: none;
     border: none;
-    color: #1f6feb;
+    color: var(--color-link);
     cursor: pointer;
     padding: 0;
     font-size: 14px;
@@ -139,7 +141,7 @@
 
 .nav2-link:hover {
     text-decoration: underline;
-    color: #265ecf; /* 提升对比度，hover 更明显 */
+    color: var(--color-link-hover);
 }
 
 .nav2-status {
@@ -148,9 +150,9 @@
     border-radius: 999px;
     font-size: 12px;
     line-height: 1.4;
-    border: 1px solid #eaeef2;
-    color: #6a737d;
-    background: #ffffff;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    background: var(--color-bg);
 }
 
 .nav2-status.online {
@@ -167,10 +169,10 @@
 
 .nav2-empty {
     padding: 16px;
-    color: #8a939e;
-    border: 1px dashed #eaeef2;
-    border-radius: 8px;
-    background: #ffffff;
+    color: var(--color-text-hint);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-bg);
 }
 
 .nav2-pagination {
@@ -180,7 +182,17 @@
     margin-top: 12px;
 }
 
-/* 重命名表单样式 */
+.nav2-pagination-info {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+}
+
+.nav2-form-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
 .nav2-form-row {
     display: flex;
     align-items: center;
@@ -189,15 +201,46 @@
     flex-wrap: wrap;
 }
 
+.nav2-form-row > label {
+    min-width: 88px;
+    color: var(--color-text-secondary);
+}
+
 .nav2-input-full {
     width: 160px;
     max-width: 100%;
 }
 
+/* 行内编辑浮层 */
+[data-inline-field] {
+    position: relative;
+}
+
+.nav2-inline-pop {
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-hover);
+    border-radius: var(--radius-btn);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+    z-index: 2000;
+}
+
+.nav2-inline-pop .nav2-input {
+    width: 220px;
+    max-width: 60vw;
+}
+
 @media (max-width: 768px) {
-    .nav2-table th:nth-child(8),
-    .nav2-table td:nth-child(8) {
-        display: none; /* 小屏隐藏：创建时间 */
+    .nav2-table th[data-col-key="created"],
+    .nav2-table td[data-col-key="created"] {
+        display: none;
     }
 }
 
@@ -205,6 +248,23 @@
     .nav2-input-full {
         width: 100%;
     }
+
+    .nav2-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nav2-toolbar form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nav2-toolbar-actions {
+        margin-left: 0;
+    }
+
+    .nav2-pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
 }
-
-

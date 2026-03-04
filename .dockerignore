@@ -5,19 +5,23 @@ __pycache__/
 # IDE
 .idea/
 .vscode/
+.cursor/
+.trae/
 
 # Git
 .git/
 .gitignore
-.workflow
+.workflow/
 
 # Project artifacts
 logs/
 *.log
 uwsgi.pid
+data/
 
-# Local database (avoid copying into image)
+# Local database
 db.sqlite3
+db.sqlite3-journal
 
 # OS
 .DS_Store
@@ -26,8 +30,19 @@ Thumbs.db
 # Build
 .dockerignore
 Dockerfile
-docker
+docker/
 
-# Docs
-notes
+# Node.js artifacts
+node_modules/
+output/
+package-lock.json
+package.json
+
+# Previous collectstatic output
+staticfiles/
+
+# Docs & non-runtime files
+notes/
 *.md
+LICENSE
+locale/

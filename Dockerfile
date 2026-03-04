@@ -1,24 +1,37 @@
+# ---- Stage 1: 前端混淆 ----
+FROM docker.1ms.run/node:20-alpine AS frontend
+
+WORKDIR /build
+COPY static/ ./static/
+COPY obfuscate.js ./
+
+RUN npm install --no-fund --no-audit javascript-obfuscator cssnano postcss \
+    && node obfuscate.js
+
+# ---- Stage 2: Python 应用 ----
 FROM docker.1ms.run/python:3.13-slim
 
-COPY . /app
+ARG APP_VERSION
+
 WORKDIR /app
 
-ARG APP_VERSION
-RUN if [ -n "$APP_VERSION" ]; then \
-    printf '%s' "$APP_VERSION" > /app/version; \
-    fi
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
-ENV PYTHONUNBUFFERED=1
-ENV DEBIAN_FRONTEND=noninteractive
-ENV APP_VERSION=${APP_VERSION}
+COPY . .
+COPY --from=frontend /build/output/ ./static/
 
-RUN pip install -r requirements.txt -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
-RUN pip cache purge
+RUN rm -f obfuscate.js \
+    && if [ -n "$APP_VERSION" ]; then printf '%s' "$APP_VERSION" > ./version; fi \
+    && python manage.py collectstatic --noinput \
+    && chmod +x start.sh
+
+ENV PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    APP_VERSION=${APP_VERSION}
 
 EXPOSE 21114
 
 VOLUME ["/app/logs", "/app/data"]
-
-RUN chmod +x start.sh
 
 CMD ["./start.sh"]

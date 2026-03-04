@@ -7,67 +7,24 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/global.css' %}">
     <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components/toast.css' %}">
     <link rel="stylesheet" href="{% static 'css/nav1.css' %}">
     <link rel="stylesheet" href="{% static 'css/nav2.css' %}">
-    <style>
-        /* Toast 轻量样式（仅此页使用） */
-        .toast-container {
-            position: fixed;
-            top: 16px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: center
-        }
-
-        .toast {
-            min-width: 100px;
-            max-width: 80vw;
-            color: #fff;
-            border-radius: 6px;
-            padding: 10px 16px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, .2);
-            opacity: 0;
-            transform: translateY(-6px);
-            transition: opacity .18s ease, transform .18s ease;
-            text-align: center;
-            word-wrap: break-word;
-            word-break: break-word;
-            white-space: normal;
-            width: auto
-        }
-
-        .toast--show {
-            opacity: 1;
-            transform: translateY(0)
-        }
-
-        .toast--error {
-            background: rgba(185, 28, 28, .95)
-        }
-
-        .toast--success {
-            background: rgba(22, 163, 74, .95)
-        }
-
-        .toast--info {
-            background: rgba(37, 99, 235, .95)
-        }
-    </style>
 </head>
 <body data-current-user="{{ user.username }}">
 <header class="header">
-    <div class="title">控制台</div>
+    <div class="header-left">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="展开导航">☰</button>
+        <div class="title">控制台</div>
+    </div>
     <div class="user-actions">
         <span>欢迎，{{ username }}！</span>
         <a href="{% url 'web_logout' %}">退出登录</a>
     </div>
 </header>
 <div class="layout">
-    <aside class="sidebar" role="navigation" aria-label="侧边导航">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="侧边导航">
         <div class="brand">导航</div>
         <nav>
             <ul class="nav">
@@ -96,21 +53,21 @@
             <form id="nav2-add-to-book-form">
                 <input type="hidden" name="peer_id" id="nav2-add-to-book-peer-id">
                 <div class="nav2-form-row">
-                    <label style="min-width:88px;color:#6a737d;">设备ID</label>
-                    <span id="nav2-add-to-book-peer-id-display" style="color:#24292e;"></span>
+                    <label>设备ID</label>
+                    <span id="nav2-add-to-book-peer-id-display"></span>
                 </div>
                 <div class="nav2-form-row">
-                    <label for="nav2-add-to-book-guid" style="min-width:88px;color:#6a737d;">选择地址簿</label>
-                    <select class="nav2-select" name="guid" id="nav2-add-to-book-guid" required style="flex:1;">
+                    <label for="nav2-add-to-book-guid">选择地址簿</label>
+                    <select class="nav2-select nav2-input-full" name="guid" id="nav2-add-to-book-guid" required>
                         <option value="" disabled selected hidden>请选择地址簿</option>
                     </select>
                 </div>
                 <div class="nav2-form-row">
-                    <label for="nav2-add-to-book-alias" style="min-width:88px;color:#6a737d;">设备别名</label>
+                    <label for="nav2-add-to-book-alias">设备别名</label>
                     <input class="nav2-input nav2-input-full" type="text" name="alias" id="nav2-add-to-book-alias"
                            placeholder="请输入设备别名(可选)">
                 </div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <div class="nav2-form-actions">
                     <button type="button" class="nav2-btn" data-close="nav2-add-to-book">取消</button>
                     <button type="submit" class="nav2-btn nav2-primary">添加</button>
                 </div>
@@ -168,6 +125,27 @@
         document.addEventListener('DOMContentLoaded', function () {
             APP.navigation.init();
             APP.events.init();
+
+            // 移动端侧边栏折叠
+            const toggle = document.getElementById('sidebar-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            function closeSidebar() {
+                sidebar.classList.remove('sidebar--open');
+                overlay.classList.remove('sidebar-overlay--show');
+            }
+
+            if (toggle && sidebar && overlay) {
+                toggle.addEventListener('click', function () {
+                    const open = sidebar.classList.toggle('sidebar--open');
+                    overlay.classList.toggle('sidebar-overlay--show', open);
+                });
+                overlay.addEventListener('click', closeSidebar);
+                sidebar.addEventListener('click', function (e) {
+                    if (e.target.closest('.nav a')) closeSidebar();
+                });
+            }
         });
     })();
 </script>

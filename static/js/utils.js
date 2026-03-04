@@ -64,12 +64,14 @@
                 const data = JSON.parse(msg);
                 msg = String((data && (data.err_msg || data.error || data.message || data.detail)) || '').trim() || fallbackText;
             } catch (e) {
+                console.warn('decodeMessage: JSON解析失败', e);
             }
         }
         if (/%[0-9A-Fa-f]{2}/.test(msg)) {
             try {
                 msg = decodeURIComponent(msg);
             } catch (e) {
+                console.warn('decodeMessage: URI解码失败', e);
             }
         }
         try {
@@ -77,6 +79,7 @@
             ta.innerHTML = msg;
             msg = ta.value || ta.textContent || msg;
         } catch (e) {
+            console.warn('decodeMessage: HTML实体解码失败', e);
         }
         msg = String(msg || '').trim();
         return msg || fallbackText;
@@ -124,12 +127,111 @@
         return val;
     }
 
+    /**
+     * HTML转义，防止XSS
+     *
+     * :param {string} str: 需要转义的字符串
+     * :returns: 转义后的安全字符串
+     * :rtype: string
+     */
+    function escapeHTML(str) {
+        const s = String(str ?? '');
+        if (!s) return s;
+        return s
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    /**
+     * 通用fetch请求封装，自动处理CSRF、错误解析和JSON响应
+     *
+     * :param {string} url: 请求URL
+     * :param {Object} options: fetch选项，可包含 method、body、headers 等
+     * :returns: 解析后的响应数据
+     * :rtype: Promise<Object>
+     */
+    function fetchJSON(url, options = {}) {
+        const defaults = {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        };
+        const merged = Object.assign({}, defaults, options);
+        merged.headers = Object.assign({}, defaults.headers, options.headers || {});
+        if (merged.method === 'POST' && !merged.headers['Content-Type']) {
+            merged.headers['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
+        }
+        if (merged.method === 'POST' && !merged.headers['X-CSRFToken']) {
+            merged.headers['X-CSRFToken'] = getCookie('csrftoken');
+        }
+        return fetch(url, merged).then(function (resp) {
+            if (!resp.ok) return parseFetchError(resp);
+            return resp.json();
+        }).then(function (data) {
+            if (!data || data.ok !== true) {
+                throw new Error((data && (data.err_msg || data.error)) || '操作失败');
+            }
+            return data;
+        });
+    }
+
+    /**
+     * POST表单数据的便捷封装
+     *
+     * :param {string} url: 请求URL
+     * :param {Object} params: 键值对参数
+     * :returns: 解析后的响应数据
+     * :rtype: Promise<Object>
+     */
+    function postForm(url, params) {
+        const body = new URLSearchParams();
+        Object.keys(params).forEach(function (k) {
+            if (params[k] !== undefined && params[k] !== null) {
+                body.set(k, params[k]);
+            }
+        });
+        return fetchJSON(url, {
+            method: 'POST',
+            body: body.toString()
+        });
+    }
+
+    /**
+     * 通用表单参数收集
+     *
+     * :param {HTMLFormElement} formEl: 表单元素
+     * :param {Array<string>} fields: 要收集的字段名列表
+     * :returns: 非空参数的键值对
+     * :rtype: Object
+     */
+    function collectFormParams(formEl, fields) {
+        const params = {};
+        if (!formEl) return params;
+        const formData = new FormData(formEl);
+        fields.forEach(function (k) {
+            const v = formData.get(k);
+            if (v !== null && String(v).trim() !== '') {
+                params[k] = String(v).trim();
+            }
+        });
+        return params;
+    }
+
     // 导出到全局
     APP.utils = {
         showToast,
         decodeMessage,
         parseFetchError,
-        getCookie
+        getCookie,
+        escapeHTML,
+        fetchJSON,
+        postForm,
+        collectFormParams
     };
 
     window.APP = APP;

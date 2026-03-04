@@ -102,7 +102,10 @@
             // 触发内容加载完成事件
             const event = new CustomEvent('contentLoaded', {detail: {key: itemKey}});
             document.dispatchEvent(event);
-        }).catch(() => {
+        }).catch(err => {
+            if (err && err.message !== 'redirected_to_login' && err.message !== 'unauthorized_to_login') {
+                console.warn('renderContent: 内容加载失败', err);
+            }
             content.innerHTML = '<p class="content-empty">加载失败，请稍后重试</p>';
         }).finally(() => {
             content.setAttribute('aria-busy', 'false');
