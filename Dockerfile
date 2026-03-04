@@ -5,7 +5,7 @@ WORKDIR /build
 COPY static/ ./static/
 COPY obfuscate.js ./
 
-RUN npm install --no-fund --no-audit javascript-obfuscator cssnano postcss \
+RUN npm install --no-fund --no-audit --registry=https://registry.npmmirror.com javascript-obfuscator cssnano postcss \
     && node obfuscate.js
 
 # ---- Stage 2: Python 应用 ----
