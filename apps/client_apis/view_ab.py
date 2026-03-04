@@ -30,7 +30,7 @@ def ab_personal(request: HttpRequest):
     """
     token_service = TokenService(request=request)
     user_info = token_service.user_info
-    guid = user_info.user_personal.get(personal__personal_type='private').personal.guid
+    guid = PersonalService().get_private_personal_guid(user_info)
     return JsonResponse(
         {
             "guid": guid,
@@ -126,7 +126,7 @@ def ab_shared_profiles(request):
     shared_personals = SharePersonalService(user_info).get_user_personals()
 
     # 自己创建的地址簿
-    created_personals = user_info.user_personal.all()
+    created_personals = PersonalService().get_user_created_personals(user_info)
 
     personal_data = []
     for personal in list(shared_personals) + list(created_personals):

@@ -7,8 +7,9 @@ from typing import TypeVar
 from django.contrib.auth.models import User, Group
 from django.db import models
 from django.db import transaction, OperationalError
-from django.db.models import Q
+from django.db.models import Q, Exists, OuterRef, F, Subquery
 from django.http import HttpRequest
+from django.utils import timezone
 
 from apps.db.models import (
     HeartBeat,
@@ -185,6 +186,54 @@ class UserService(BaseService):
     def get_user_by_id(self, user_id) -> User:
         return self.db.objects.filter(id=user_id).first()
 
+    def username_exists(self, username) -> bool:
+        return self.db.objects.filter(username=username).exists()
+
+    def email_exists(self, email) -> bool:
+        return self.db.objects.filter(email=email).exists()
+
+    def update_user(self, username, **kwargs) -> User | None:
+        user = self.get_user_by_name(username)
+        if not user:
+            return None
+        for field, value in kwargs.items():
+            setattr(user, field, value)
+        user.save(update_fields=list(kwargs.keys()))
+        logger.info(f"更新用户信息: {username} - {list(kwargs.keys())}")
+        return user
+
+    def get_active_user_by_name(self, username) -> User | None:
+        return self.db.objects.filter(username=username, is_active=True).first()
+
+    def delete_user_soft(self, username) -> bool:
+        user = self.get_active_user_by_name(username)
+        if not user:
+            return False
+        timestamp = int(time.time())
+        update_fields = ['username', 'is_active']
+        user.is_active = False
+        user.username = f'{user.username}_deleted_{timestamp}'
+        if user.email:
+            user.email = f'{user.email}_deleted_{timestamp}'
+            update_fields.append('email')
+        user.save(update_fields=update_fields)
+        logger.info(f"软删除用户: {username}")
+        return True
+
+    def count_active_users(self) -> int:
+        return self.db.objects.filter(is_active=True).count()
+
+    def get_active_users_qs(self, q='', ordering=('-date_joined',)):
+        qs = self.db.objects.filter(is_active=True)
+        if q:
+            qs = qs.filter(
+                Q(username__icontains=q) |
+                Q(email__icontains=q) |
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q)
+            )
+        return qs.order_by(*ordering)
+
 
 class GroupService(BaseService):
     db = Group
@@ -294,6 +343,44 @@ class PeerInfoService(BaseService):
     def get_peers(self, *peers):
         return self.db.objects.filter(peer_id__in=peers).all()
 
+    def count_all(self) -> int:
+        return self.db.objects.count()
+
+    def get_all_ordered_qs(self, ordering=('-created_at',)):
+        return self.db.objects.order_by(*ordering)
+
+    def get_device_list_qs(self, user, q='', os_param='', status=''):
+        online_threshold = timezone.now() - timedelta(minutes=5)
+        recent_hb = HeartBeat.objects.filter(
+            Q(peer_id=OuterRef('peer_id')) | Q(uuid=OuterRef('uuid')),
+            modified_at__gte=online_threshold
+        ).values('pk')[:1]
+
+        base_qs = self.db.objects.all().annotate(
+            is_online=Exists(recent_hb),
+            owner_username=F('username'),
+            alias=Subquery(
+                Alias.objects.filter(
+                    peer_id=OuterRef('peer_id')
+                ).values('alias')[:1]
+            ),
+            tags=Subquery(
+                ClientTags.objects.filter(
+                    peer_id=OuterRef('peer_id'),
+                    user=user
+                ).values('tags')[:1]
+            )
+        ).order_by('-created_at')
+
+        if q:
+            base_qs = base_qs.filter(Q(peer_id__icontains=q) | Q(device_name__icontains=q))
+        if os_param:
+            base_qs = base_qs.filter(os__icontains=os_param)
+        if status in ('online', 'offline'):
+            base_qs = base_qs.filter(is_online=(status == 'online'))
+
+        return base_qs
+
 
 class HeartBeatService(BaseService):
     db = HeartBeat
@@ -329,6 +416,23 @@ class HeartBeatService(BaseService):
         if client and get_local_time() - client.modified_at < timeout:
             return True
         return False
+
+    def is_online(self, peer_id, uuid=None, timeout_minutes=5) -> bool:
+        threshold = timezone.now() - timedelta(minutes=timeout_minutes)
+        q_filter = Q(peer_id=peer_id)
+        if uuid:
+            q_filter |= Q(uuid=uuid)
+        return self.db.objects.filter(q_filter, modified_at__gte=threshold).exists()
+
+    def get_online_peer_ids(self, peer_ids, timeout_seconds=60) -> set:
+        if not peer_ids:
+            return set()
+        threshold = timezone.now() - timedelta(seconds=timeout_seconds)
+        online_qs = self.db.objects.filter(
+            peer_id__in=peer_ids,
+            modified_at__gte=threshold
+        ).values_list('peer_id', flat=True).distinct()
+        return set(online_qs)
 
 
 class LoginClientService(BaseService):
@@ -883,6 +987,42 @@ class PersonalService(BaseService):
         logger.info(f'取消分享地址簿: guid={guid}, username={username}')
         return res
 
+    def get_personal_by_user(self, guid, user) -> Personal | None:
+        return self.db.objects.filter(guid=guid, creator=user).first()
+
+    def personal_name_exists(self, user, name, exclude_guid=None) -> bool:
+        qs = self.db.objects.filter(creator=user, personal_name=name)
+        if exclude_guid:
+            qs = qs.exclude(guid=exclude_guid)
+        return qs.exists()
+
+    def rename_personal(self, guid, new_name) -> None:
+        self.db.objects.filter(guid=guid).update(personal_name=new_name)
+        logger.info(f'重命名地址簿: guid={guid}, new_name={new_name}')
+
+    def get_personals_by_creator(self, user, q='', personal_type=None, ordering=('-created_at',)):
+        qs = self.db.objects.filter(creator=user)
+        if q:
+            qs = qs.filter(guid__icontains=q)
+        if personal_type in ('public', 'private'):
+            qs = qs.filter(personal_type=personal_type)
+        return qs.order_by(*ordering)
+
+    def get_or_create_default_personal(self, user) -> Personal:
+        personal, _ = self.db.objects.get_or_create(
+            creator=user,
+            personal_type='private',
+            personal_name='默认地址簿',
+            defaults={}
+        )
+        return personal
+
+    def get_private_personal_guid(self, user) -> str:
+        return user.user_personal.get(personal__personal_type='private').personal.guid
+
+    def get_user_created_personals(self, user):
+        return user.user_personal.all()
+
     def add_peer_to_personal(self, guid, peer_id):
         peer = PeerInfoService().get_peer_info_by_peer_id(peer_id)
         return self.get_personal(guid=guid).personal_peer.create(peer=peer)
@@ -927,6 +1067,68 @@ class AliasService(BaseService):
 
     def delete_alias(self, *peer_ids, guid):
         return self.db.objects.filter(guid=guid, peer_id__in=peer_ids).delete()
+
+    def count_by_personal(self, personal) -> int:
+        return self.db.objects.filter(guid=personal).count()
+
+    def get_alias_by_peer_and_personal(self, peer, personal) -> Alias | None:
+        return self.db.objects.filter(peer_id=peer, guid=personal).first()
+
+    def get_peer_alias_text(self, peer, user) -> str:
+        default_personal = PersonalService().get_or_create_default_personal(user)
+        alias_qs = self.db.objects.filter(peer_id=peer)
+        prefer = alias_qs.filter(guid=default_personal).values_list('alias', flat=True).first()
+        if prefer is not None:
+            return prefer
+        fallback = alias_qs.values_list('alias', flat=True).first()
+        return fallback or ''
+
+    def update_or_create_alias(self, peer, personal, alias_text) -> None:
+        self.db.objects.update_or_create(
+            peer_id=peer,
+            guid=personal,
+            defaults={'alias': alias_text}
+        )
+
+    def delete_alias_by_peer_and_personal(self, peer, personal) -> None:
+        self.db.objects.filter(peer_id=peer, guid=personal).delete()
+
+
+class ClientTagsService(BaseService):
+    """
+    设备标签关联服务类（面向 Web 视图的轻量标签操作）
+    """
+    db = ClientTags
+
+    def get_tags_text_by_peer_in_personal(self, peer_id, guid) -> str:
+        obj = self.db.objects.filter(peer_id=peer_id, guid_id=guid).first()
+        return obj.tags if obj else ''
+
+    def set_tags_for_peer_in_personal(self, user, peer_id, guid, tags_text) -> None:
+        self.db.objects.filter(peer_id=peer_id, guid_id=guid).delete()
+        if tags_text:
+            self.db.objects.create(
+                user=user,
+                peer_id=peer_id,
+                tags=tags_text,
+                guid_id=guid
+            )
+
+    def get_user_peer_tags(self, user, peer_id) -> list:
+        return list(
+            self.db.objects.filter(user=user, peer_id=peer_id).values_list('tags', flat=True)
+        )
+
+    def update_or_create_client_tag(self, user, peer_id, personal, tags) -> None:
+        self.db.objects.update_or_create(
+            user=user,
+            peer_id=peer_id,
+            guid=personal,
+            defaults={'tags': tags}
+        )
+
+    def delete_client_tag(self, user, peer_id, personal) -> None:
+        self.db.objects.filter(user=user, peer_id=peer_id, guid=personal).delete()
 
 
 class SharePersonalService(BaseService):
