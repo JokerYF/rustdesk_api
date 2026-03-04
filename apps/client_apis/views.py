@@ -55,6 +55,9 @@ def heartbeat(request: HttpRequest):
             modified_at=modified_at,
             ver=ver,
         )
+
+        TokenService().renew_token_if_alive(uuid)
+
         return HttpResponse(status=200)
     except json.JSONDecodeError as e:
         logger.error(f"心跳请求JSON解析失败: {e}")
@@ -74,7 +77,6 @@ def sysinfo(request: HttpRequest):
     body = json.loads(request.body.decode('utf-8'))
     uuid = body.get('uuid')
 
-    # 先更新设备信息
     PeerInfoService().update(
         uuid=uuid,
         peer_id=body.get('id'),
@@ -85,10 +87,6 @@ def sysinfo(request: HttpRequest):
         username=body.get('username') or body.get('hostname'),
         version=body.get('version'),
     )
-
-    # 如果当前设备登录过，则更新token
-    # 这里有个问题，这里更新没有校验token有效期，服务器停机好几个小时后启动，还是会刷新token，没想好这块逻辑，先这样
-    TokenService(request=request).update_token_by_uuid(uuid)
 
     return HttpResponse(status=200)
 

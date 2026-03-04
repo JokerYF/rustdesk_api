@@ -503,6 +503,30 @@ class TokenService(BaseService):
             return True
         return False
 
+    def renew_token_if_alive(self, uuid, timeout=3600, min_interval=300):
+        """
+        仅当 token 有效且距上次续期超过 min_interval 秒时才写入。
+
+        用于 heartbeat 中按心跳自动续期，避免每次心跳都触发 DB 写入。
+
+        :param uuid: 设备 UUID
+        :param timeout: token 过期时间（秒），超过则不续期
+        :param min_interval: 最小续期间隔（秒），未达到则跳过写入
+        :returns: 是否实际执行了续期写入
+        """
+        token_obj = self.db.objects.filter(uuid=uuid).first()
+        if not token_obj:
+            return False
+        now = get_local_time()
+        if token_obj.last_used_at < now - timedelta(seconds=timeout):
+            return False
+        if token_obj.last_used_at > now - timedelta(seconds=min_interval):
+            return False
+        token_obj.last_used_at = now
+        token_obj.save(update_fields=['last_used_at'])
+        logger.info(f"心跳续期令牌: uuid={uuid}")
+        return True
+
     def delete_token(self, token):
         res = self.db.objects.filter(token=token).delete()
         logger.info(f"删除令牌: {token}")
