@@ -32,7 +32,7 @@ class GunicornConfig:
     preload_app = True
     timeout = int(get_env("TIMEOUT", 120))
     graceful_timeout = int(get_env("GRACEFUL_TIMEOUT", 30))
-    keepalive = int(get_env("KEEPALIVE", 5))
+    keepalive = int(get_env("KEEPALIVE", 15))
     max_requests = int(get_env("MAX_REQUESTS", 2000))
     max_requests_jitter = int(get_env("MAX_REQUESTS_JITTER", 200))
 
