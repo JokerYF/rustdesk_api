@@ -38,11 +38,12 @@ def check_login(func):
         client_info = system_info.get_peer_info_by_uuid(uuid)
         if not token_service.check_token(token, timeout=PublicConfig.TOKEN_TIMEOUT):
             # Server端记录登录信息
-            LoginClientService().update_logout_status(
-                uuid=uuid,
-                username=user_info.username,
-                peer_id=client_info.peer_id,
-            )
+            if user_info:
+                LoginClientService().update_logout_status(
+                    uuid=uuid,
+                    username=user_info.username,
+                    peer_id=client_info.peer_id,
+                )
             return JsonResponse({'error': 'Invalid token'}, status=401)
         token_service.update_token(token)
         return func(request, *args, **kwargs)
