@@ -14,6 +14,7 @@ class PublicConfig:
     DEBUG = str2bool(get_env('DEBUG', False))
     APP_VERSION = get_env('APP_VERSION', '')
     SESSION_TIMEOUT = int(get_env('SESSION_TIMEOUT', 3600))
+    TOKEN_TIMEOUT = int(get_env('TOKEN_TIMEOUT', 3600))  # Token 超时时间（秒）
 
 
 class GunicornConfig:
@@ -32,7 +33,7 @@ class GunicornConfig:
     preload_app = True
     timeout = int(get_env("TIMEOUT", 120))
     graceful_timeout = int(get_env("GRACEFUL_TIMEOUT", 30))
-    keepalive = int(get_env("KEEPALIVE", 15))
+    keepalive = int(get_env("KEEPALIVE", 65))
     max_requests = int(get_env("MAX_REQUESTS", 2000))
     max_requests_jitter = int(get_env("MAX_REQUESTS_JITTER", 200))
 

@@ -35,6 +35,7 @@ from apps.db.models import (
     DeviceGroupPeer,
     GroupRole,
 )
+from common.env import PublicConfig
 from common.error import UserNotFoundError
 from common.utils import get_local_time, get_randem_md5
 
@@ -761,7 +762,9 @@ class TokenService(BaseService):
         logger.info(f"{'创建' if created else '更新'}令牌: user: {username} uuid: {uuid} token: {token}")
         return token
 
-    def check_token(self, token, timeout=3600):
+    def check_token(self, token, timeout=None):
+        if timeout is None:
+            timeout = PublicConfig.TOKEN_TIMEOUT
         if _token := self.db.objects.filter(token=token).first():
             return _token.last_used_at > get_local_time() - timedelta(seconds=timeout)
         self.db.objects.filter(token=token).delete()
@@ -782,10 +785,12 @@ class TokenService(BaseService):
             return True
         return False
 
-    def renew_token_if_alive(self, uuid, timeout=3600, min_interval=300):
+    def renew_token_if_alive(self, uuid, timeout=None, min_interval=300):
         """
         仅当 token 有效且距上次续期超过 min_interval 秒时才写入。
         """
+        if timeout is None:
+            timeout = PublicConfig.TOKEN_TIMEOUT
         token_obj = self.db.objects.filter(uuid=uuid).first()
         if not token_obj:
             return False

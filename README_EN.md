@@ -185,6 +185,7 @@ python manage.py runserver 0.0.0.0:21114
 | `WORKERS`         | Gunicorn worker count     | `4`             | Recommended 2-8                  |
 | `THREADS`         | Threads per worker        | `8`             | Recommended 2-16                 |
 | `SESSION_TIMEOUT` | Session timeout (seconds) | `3600`          | Any positive integer             |
+| `TOKEN_TIMEOUT`   | Token timeout (seconds)   | `3600`          | Any positive integer             |
 | `TZ`              | Timezone                  | `Asia/Shanghai` | Standard timezone name           |
 
 ### Database Configuration

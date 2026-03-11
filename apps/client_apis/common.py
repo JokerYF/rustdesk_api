@@ -9,6 +9,7 @@ from django.http.response import HttpResponseRedirectBase, HttpResponse
 from django.template.response import TemplateResponse, SimpleTemplateResponse
 
 from apps.db.service import TokenService, PeerInfoService, LoginClientService
+from common.env import PublicConfig
 from common.utils import get_randem_md5
 
 logger = logging.getLogger('request_debug_log')
@@ -35,7 +36,7 @@ def check_login(func):
 
         system_info = PeerInfoService()
         client_info = system_info.get_peer_info_by_uuid(uuid)
-        if not token_service.check_token(token, timeout=3600):
+        if not token_service.check_token(token, timeout=PublicConfig.TOKEN_TIMEOUT):
             # Server端记录登录信息
             LoginClientService().update_logout_status(
                 uuid=uuid,
