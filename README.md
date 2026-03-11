@@ -187,6 +187,27 @@ python manage.py runserver 0.0.0.0:21114
 | `TOKEN_TIMEOUT`   | Token 超时时间(秒) | `3600`          | 任何正整数                            |
 | `TZ`              | 时区            | `Asia/Shanghai` | 标准时区名称                           |
 
+### 配置文件
+
+项目支持使用 `.env` 文件进行配置管理。创建 `.env` 文件并将环境变量写入其中：
+
+```bash
+# 示例 .env 文件
+DATABASE=sqlite3
+DEBUG=False
+HOST=0.0.0.0
+PORT=21114
+WORKERS=4
+THREADS=8
+SESSION_TIMEOUT=3600
+TOKEN_TIMEOUT=3600
+TZ=Asia/Shanghai
+```
+
+### 运行时配置记录
+
+系统会在启动时自动记录当前生效的环境变量到 `runtime_config.json` 文件中，便于调试和排查问题。该文件包含启动时的实际配置值。
+
 ### 数据库配置
 
 #### SQLite（默认）

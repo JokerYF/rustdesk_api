@@ -188,6 +188,29 @@ python manage.py runserver 0.0.0.0:21114
 | `TOKEN_TIMEOUT`   | Token timeout (seconds)   | `3600`          | Any positive integer             |
 | `TZ`              | Timezone                  | `Asia/Shanghai` | Standard timezone name           |
 
+### Configuration File
+
+The project supports using `.env` file for configuration management. Create a `.env` file and write environment
+variables to it:
+
+```bash
+# Example .env file
+DATABASE=sqlite3
+DEBUG=False
+HOST=0.0.0.0
+PORT=21114
+WORKERS=4
+THREADS=8
+SESSION_TIMEOUT=3600
+TOKEN_TIMEOUT=3600
+TZ=Asia/Shanghai
+```
+
+### Runtime Configuration Logging
+
+The system automatically records the current effective environment variables to the `runtime_config.json` file at
+startup for debugging and troubleshooting purposes. This file contains the actual configuration values at startup.
+
 ### Database Configuration
 
 #### SQLite (Default)
@@ -637,4 +660,3 @@ Made with ❤️ by 御风
 English | [中文](./README.md)
 
 </div>
-
